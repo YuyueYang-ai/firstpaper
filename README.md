@@ -2,7 +2,7 @@
 ### [Homepage](https://liquorleaf.github.io/research/OmniGS/) | [arXiv](https://arxiv.org/abs/2404.03202)
 
 **OmniGS: Fast Radiance Field Reconstruction using Omnidirectional Gaussian Splatting** <br>
-[Longwei Li](https://github.com/liquorleaf)<sup>1</sup>, [Huajian Huang](https://huajianup.github.io)<sup>2</sup>, [Sai-Kit Yeung](https://saikit.org/)<sup>2</sup>, and [Hui Cheng](https://cse.sysu.edu.cn/content/2504)<sup>1</sup> <br>
+[Longwei Li](https://github.com/liquorleaf)<sup>1</sup>, [Huajian Huang](https://huajianup.github.io)<sup>2</sup>, [Sai-Kit Yeung](https://saikit.org/)<sup>2</sup>, and [Hui Cheng](https://cse.sysu.edu.cn/teacher/ChengHui)<sup>1</sup> <br>
 Sun Yat-Sen University<sup>1</sup>, The Hong Kong University of Science and Technology<sup>2</sup> <br>
 2025 IEEE/CVF Winter Conference on Applications of Computer Vision (WACV)
 
