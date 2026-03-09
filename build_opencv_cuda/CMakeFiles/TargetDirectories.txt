@@ -1,0 +1,14 @@
+/media/yunxiangyang/Train/omniGS/build_opencv_cuda/CMakeFiles/simple_knn.dir
+/media/yunxiangyang/Train/omniGS/build_opencv_cuda/CMakeFiles/cuda_rasterizer.dir
+/media/yunxiangyang/Train/omniGS/build_opencv_cuda/CMakeFiles/imgui.dir
+/media/yunxiangyang/Train/omniGS/build_opencv_cuda/CMakeFiles/gaussian_mapper.dir
+/media/yunxiangyang/Train/omniGS/build_opencv_cuda/CMakeFiles/gaussian_viewer.dir
+/media/yunxiangyang/Train/omniGS/build_opencv_cuda/CMakeFiles/view_result.dir
+/media/yunxiangyang/Train/omniGS/build_opencv_cuda/CMakeFiles/simple_cloud.dir
+/media/yunxiangyang/Train/omniGS/build_opencv_cuda/CMakeFiles/train_openmvg_lonlat.dir
+/media/yunxiangyang/Train/omniGS/build_opencv_cuda/CMakeFiles/test_openmvg_lonlat.dir
+/media/yunxiangyang/Train/omniGS/build_opencv_cuda/CMakeFiles/train_360roam.dir
+/media/yunxiangyang/Train/omniGS/build_opencv_cuda/CMakeFiles/train_egonerf_omniblender.dir
+/media/yunxiangyang/Train/omniGS/build_opencv_cuda/CMakeFiles/train_egonerf_ricoh360.dir
+/media/yunxiangyang/Train/omniGS/build_opencv_cuda/CMakeFiles/edit_cache.dir
+/media/yunxiangyang/Train/omniGS/build_opencv_cuda/CMakeFiles/rebuild_cache.dir

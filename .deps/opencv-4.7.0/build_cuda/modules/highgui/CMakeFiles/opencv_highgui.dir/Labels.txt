@@ -1,0 +1,39 @@
+# Target labels
+ Main
+ opencv_highgui
+ Module
+# Source files and their labels
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/modules/highgui/include/opencv2/highgui.hpp
+ Main
+ opencv_highgui
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/modules/highgui/include/opencv2/highgui/highgui.hpp
+ Main
+ opencv_highgui
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/modules/highgui/include/opencv2/highgui/highgui_c.h
+ Main
+ opencv_highgui
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/modules/highgui/src/backend.cpp
+ Main
+ opencv_highgui
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/modules/highgui/src/window.cpp
+ Main
+ opencv_highgui
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/modules/highgui/src/roiSelector.cpp
+ Main
+ opencv_highgui
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/modules/highgui/src/window_gtk.cpp
+ Main
+ opencv_highgui
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/modules/highgui/src/precomp.hpp
+ Main
+ opencv_highgui
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build_cuda/cvconfig.h
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build_cuda/opencv2/opencv_modules.hpp

@@ -1,0 +1,445 @@
+Build output check failed:
+    Regex: 'command[- ]line option .* is valid for .* but not for C'
+    Output line: 'cc1: warning: command-line option ‘-Wnon-virtual-dtor’ is valid for C++/ObjC++ but not for C'
+Compilation failed:
+    source file: '/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c'
+    check option: ' -fsigned-char -W -Wall -Wreturn-type  -Wnon-virtual-dtor'
+===== BUILD LOG =====
+Change Dir: /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_3eb7b/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_3eb7b.dir/build.make CMakeFiles/cmTC_3eb7b.dir/build
+gmake[1]: 进入目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+Building C object CMakeFiles/cmTC_3eb7b.dir/src.c.o
+/usr/bin/gcc-10   -O3 -DNDEBUG -fPIE    -fsigned-char -W -Wall -Wreturn-type  -Wnon-virtual-dtor -o CMakeFiles/cmTC_3eb7b.dir/src.c.o -c /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c
+cc1: warning: command-line option ‘-Wnon-virtual-dtor’ is valid for C++/ObjC++ but not for C
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c:1: warning: ignoring ‘#pragma  ’ [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+Linking C executable cmTC_3eb7b
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_3eb7b.dir/link.txt --verbose=1
+/usr/bin/gcc-10 -O3 -DNDEBUG CMakeFiles/cmTC_3eb7b.dir/src.c.o -o cmTC_3eb7b 
+gmake[1]: 离开目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'command[- ]line option .* is valid for .* but not for C\+\+'
+    Output line: 'cc1plus: warning: command-line option ‘-Wmissing-prototypes’ is valid for C/ObjC but not for C++'
+Compilation failed:
+    source file: '/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations  -Wmissing-prototypes'
+===== BUILD LOG =====
+Change Dir: /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_96831/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_96831.dir/build.make CMakeFiles/cmTC_96831.dir/build
+gmake[1]: 进入目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+Building CXX object CMakeFiles/cmTC_96831.dir/src.cxx.o
+/usr/bin/g++-10   -O3 -DNDEBUG -fPIE    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations  -Wmissing-prototypes -std=c++11 -o CMakeFiles/cmTC_96831.dir/src.cxx.o -c /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx
+cc1plus: warning: command-line option ‘-Wmissing-prototypes’ is valid for C/ObjC but not for C++
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring ‘#pragma  ’ [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+Linking CXX executable cmTC_96831
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_96831.dir/link.txt --verbose=1
+/usr/bin/g++-10 -O3 -DNDEBUG CMakeFiles/cmTC_96831.dir/src.cxx.o -o cmTC_96831 
+gmake[1]: 离开目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'command[- ]line option .* is valid for .* but not for C\+\+'
+    Output line: 'cc1plus: warning: command-line option ‘-Wstrict-prototypes’ is valid for C/ObjC but not for C++'
+Compilation failed:
+    source file: '/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations  -Wstrict-prototypes'
+===== BUILD LOG =====
+Change Dir: /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_48c00/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_48c00.dir/build.make CMakeFiles/cmTC_48c00.dir/build
+gmake[1]: 进入目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+Building CXX object CMakeFiles/cmTC_48c00.dir/src.cxx.o
+/usr/bin/g++-10   -O3 -DNDEBUG -fPIE    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations  -Wstrict-prototypes -std=c++11 -o CMakeFiles/cmTC_48c00.dir/src.cxx.o -c /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx
+cc1plus: warning: command-line option ‘-Wstrict-prototypes’ is valid for C/ObjC but not for C++
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring ‘#pragma  ’ [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+Linking CXX executable cmTC_48c00
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_48c00.dir/link.txt --verbose=1
+/usr/bin/g++-10 -O3 -DNDEBUG CMakeFiles/cmTC_48c00.dir/src.cxx.o -o cmTC_48c00 
+gmake[1]: 离开目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'command[- ]line option .* is valid for .* but not for C'
+    Output line: 'cc1: warning: command-line option ‘-Wsign-promo’ is valid for C++/ObjC++ but not for C'
+Compilation failed:
+    source file: '/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c'
+    check option: ' -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow  -Wsign-promo'
+===== BUILD LOG =====
+Change Dir: /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_34b21/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_34b21.dir/build.make CMakeFiles/cmTC_34b21.dir/build
+gmake[1]: 进入目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+Building C object CMakeFiles/cmTC_34b21.dir/src.c.o
+/usr/bin/gcc-10   -O3 -DNDEBUG -fPIE    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow  -Wsign-promo -o CMakeFiles/cmTC_34b21.dir/src.c.o -c /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c
+cc1: warning: command-line option ‘-Wsign-promo’ is valid for C++/ObjC++ but not for C
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c:1: warning: ignoring ‘#pragma  ’ [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+Linking C executable cmTC_34b21
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_34b21.dir/link.txt --verbose=1
+/usr/bin/gcc-10 -O3 -DNDEBUG CMakeFiles/cmTC_34b21.dir/src.c.o -o cmTC_34b21 
+gmake[1]: 离开目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'command[- ]line option .* is valid for .* but not for C'
+    Output line: 'cc1: warning: command-line option ‘-Wsuggest-override’ is valid for C++/ObjC++ but not for C'
+Compilation failed:
+    source file: '/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c'
+    check option: ' -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized  -Wsuggest-override'
+===== BUILD LOG =====
+Change Dir: /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_5372a/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_5372a.dir/build.make CMakeFiles/cmTC_5372a.dir/build
+gmake[1]: 进入目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+Building C object CMakeFiles/cmTC_5372a.dir/src.c.o
+/usr/bin/gcc-10   -O3 -DNDEBUG -fPIE    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized  -Wsuggest-override -o CMakeFiles/cmTC_5372a.dir/src.c.o -c /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c
+cc1: warning: command-line option ‘-Wsuggest-override’ is valid for C++/ObjC++ but not for C
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c:1: warning: ignoring ‘#pragma  ’ [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+Linking C executable cmTC_5372a
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_5372a.dir/link.txt --verbose=1
+/usr/bin/gcc-10 -O3 -DNDEBUG CMakeFiles/cmTC_5372a.dir/src.c.o -o cmTC_5372a 
+gmake[1]: 离开目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'command[- ]line option .* is valid for .* but not for C'
+    Output line: 'cc1: warning: command-line option ‘-Wno-delete-non-virtual-dtor’ is valid for C++/ObjC++ but not for C'
+Compilation failed:
+    source file: '/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c'
+    check option: ' -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized  -Wno-delete-non-virtual-dtor'
+===== BUILD LOG =====
+Change Dir: /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_f096d/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_f096d.dir/build.make CMakeFiles/cmTC_f096d.dir/build
+gmake[1]: 进入目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+Building C object CMakeFiles/cmTC_f096d.dir/src.c.o
+/usr/bin/gcc-10   -O3 -DNDEBUG -fPIE    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized  -Wno-delete-non-virtual-dtor -o CMakeFiles/cmTC_f096d.dir/src.c.o -c /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c
+cc1: warning: command-line option ‘-Wno-delete-non-virtual-dtor’ is valid for C++/ObjC++ but not for C
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c:1: warning: ignoring ‘#pragma  ’ [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+Linking C executable cmTC_f096d
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f096d.dir/link.txt --verbose=1
+/usr/bin/gcc-10 -O3 -DNDEBUG CMakeFiles/cmTC_f096d.dir/src.c.o -o cmTC_f096d 
+gmake[1]: 离开目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1plus: note: unrecognized command-line option ‘-Wno-unnamed-type-template-args’ may have been intended to silence earlier diagnostics'
+Compilation failed:
+    source file: '/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wundef -Winit-self -Wpointer-arith -Wshadow -Wsign-promo -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor  -Wno-unnamed-type-template-args'
+===== BUILD LOG =====
+Change Dir: /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_9329a/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_9329a.dir/build.make CMakeFiles/cmTC_9329a.dir/build
+gmake[1]: 进入目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+Building CXX object CMakeFiles/cmTC_9329a.dir/src.cxx.o
+/usr/bin/g++-10   -O3 -DNDEBUG -fPIE    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wundef -Winit-self -Wpointer-arith -Wshadow -Wsign-promo -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor  -Wno-unnamed-type-template-args -std=c++11 -o CMakeFiles/cmTC_9329a.dir/src.cxx.o -c /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring ‘#pragma  ’ [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1plus: note: unrecognized command-line option ‘-Wno-unnamed-type-template-args’ may have been intended to silence earlier diagnostics
+Linking CXX executable cmTC_9329a
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9329a.dir/link.txt --verbose=1
+/usr/bin/g++-10 -O3 -DNDEBUG CMakeFiles/cmTC_9329a.dir/src.cxx.o -o cmTC_9329a 
+gmake[1]: 离开目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1: note: unrecognized command-line option ‘-Wno-unnamed-type-template-args’ may have been intended to silence earlier diagnostics'
+Compilation failed:
+    source file: '/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c'
+    check option: ' -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized  -Wno-unnamed-type-template-args'
+===== BUILD LOG =====
+Change Dir: /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_f7cd9/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_f7cd9.dir/build.make CMakeFiles/cmTC_f7cd9.dir/build
+gmake[1]: 进入目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+Building C object CMakeFiles/cmTC_f7cd9.dir/src.c.o
+/usr/bin/gcc-10   -O3 -DNDEBUG -fPIE    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized  -Wno-unnamed-type-template-args -o CMakeFiles/cmTC_f7cd9.dir/src.c.o -c /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c:1: warning: ignoring ‘#pragma  ’ [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1: note: unrecognized command-line option ‘-Wno-unnamed-type-template-args’ may have been intended to silence earlier diagnostics
+Linking C executable cmTC_f7cd9
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f7cd9.dir/link.txt --verbose=1
+/usr/bin/gcc-10 -O3 -DNDEBUG CMakeFiles/cmTC_f7cd9.dir/src.c.o -o cmTC_f7cd9 
+gmake[1]: 离开目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'command[- ]line option .* is valid for .* but not for C'
+    Output line: 'cc1: warning: command-line option ‘-fvisibility-inlines-hidden’ is valid for C++/ObjC++ but not for C'
+Compilation failed:
+    source file: '/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c'
+    check option: ' -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -Wno-long-long -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse -msse2 -msse3 -fvisibility=hidden  -fvisibility-inlines-hidden'
+===== BUILD LOG =====
+Change Dir: /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_94118/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_94118.dir/build.make CMakeFiles/cmTC_94118.dir/build
+gmake[1]: 进入目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+Building C object CMakeFiles/cmTC_94118.dir/src.c.o
+/usr/bin/gcc-10   -O3 -DNDEBUG -fPIE    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -Wno-long-long -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse -msse2 -msse3 -fvisibility=hidden  -fvisibility-inlines-hidden -o CMakeFiles/cmTC_94118.dir/src.c.o -c /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c
+cc1: warning: command-line option ‘-fvisibility-inlines-hidden’ is valid for C++/ObjC++ but not for C
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c:1: warning: ignoring ‘#pragma  ’ [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+Linking C executable cmTC_94118
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_94118.dir/link.txt --verbose=1
+/usr/bin/gcc-10 -O3 -DNDEBUG CMakeFiles/cmTC_94118.dir/src.c.o -o cmTC_94118 
+gmake[1]: 离开目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1: note: unrecognized command-line option ‘-Wno-implicit-const-int-float-conversion’ may have been intended to silence earlier diagnostics'
+Compilation failed:
+    source file: '/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c'
+    check option: ' -Wno-implicit-const-int-float-conversion'
+===== BUILD LOG =====
+Change Dir: /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_b7c07/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_b7c07.dir/build.make CMakeFiles/cmTC_b7c07.dir/build
+gmake[1]: 进入目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+Building C object CMakeFiles/cmTC_b7c07.dir/src.c.o
+/usr/bin/gcc-10   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -Wno-long-long -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse -msse2 -msse3 -fvisibility=hidden  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-implicit-const-int-float-conversion -o CMakeFiles/cmTC_b7c07.dir/src.c.o -c /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.c:1: warning: ignoring ‘#pragma  ’ [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1: note: unrecognized command-line option ‘-Wno-implicit-const-int-float-conversion’ may have been intended to silence earlier diagnostics
+Linking C executable cmTC_b7c07
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_b7c07.dir/link.txt --verbose=1
+/usr/bin/gcc-10    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -Wno-long-long -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse -msse2 -msse3 -fvisibility=hidden  -O3 -DNDEBUG  -DNDEBUG   -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_b7c07.dir/src.c.o -o cmTC_b7c07 
+gmake[1]: 离开目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+
+
+===== END =====
+
+Determining if the _aligned_malloc exist failed with the following output:
+Change Dir: /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_4b09e/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_4b09e.dir/build.make CMakeFiles/cmTC_4b09e.dir/build
+gmake[1]: 进入目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+Building C object CMakeFiles/cmTC_4b09e.dir/CheckSymbolExists.c.o
+/usr/bin/gcc-10   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -Wno-long-long -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse -msse2 -msse3 -fvisibility=hidden -Wno-unused-but-set-variable  -O3 -DNDEBUG  -DNDEBUG -fPIE -o CMakeFiles/cmTC_4b09e.dir/CheckSymbolExists.c.o -c /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c: In function ‘main’:
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:8:19: error: ‘_aligned_malloc’ undeclared (first use in this function)
+    8 |   return ((int*)(&_aligned_malloc))[argc];
+      |                   ^~~~~~~~~~~~~~~
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:8:19: note: each undeclared identifier is reported only once for each function it appears in
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:4:14: warning: parameter ‘argc’ set but not used [-Wunused-but-set-parameter]
+    4 | int main(int argc, char** argv)
+      |          ~~~~^~~~
+gmake[1]: *** [CMakeFiles/cmTC_4b09e.dir/build.make:78：CMakeFiles/cmTC_4b09e.dir/CheckSymbolExists.c.o] 错误 1
+gmake[1]: 离开目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+gmake: *** [Makefile:127：cmTC_4b09e/fast] 错误 2
+
+
+File /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <malloc.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef _aligned_malloc
+  return ((int*)(&_aligned_malloc))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+Determining if the function sgemm_ exists failed with the following output:
+Change Dir: /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_46703/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_46703.dir/build.make CMakeFiles/cmTC_46703.dir/build
+gmake[1]: 进入目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+Building C object CMakeFiles/cmTC_46703.dir/CheckFunctionExists.c.o
+/usr/bin/gcc-10   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -Wno-long-long -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse -msse2 -msse3 -fvisibility=hidden -DCHECK_FUNCTION_EXISTS=sgemm_ -O3 -DNDEBUG  -DNDEBUG -fPIE -o CMakeFiles/cmTC_46703.dir/CheckFunctionExists.c.o -c /usr/share/cmake-3.22/Modules/CheckFunctionExists.c
+Linking C executable cmTC_46703
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_46703.dir/link.txt --verbose=1
+/usr/bin/gcc-10    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -Wno-long-long -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse -msse2 -msse3 -fvisibility=hidden -DCHECK_FUNCTION_EXISTS=sgemm_ -O3 -DNDEBUG  -DNDEBUG   -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_46703.dir/CheckFunctionExists.c.o -o cmTC_46703 
+/usr/bin/ld: CMakeFiles/cmTC_46703.dir/CheckFunctionExists.c.o: in function `main':
+CheckFunctionExists.c:(.text.startup.main+0x10): undefined reference to `sgemm_'
+collect2: error: ld returned 1 exit status
+gmake[1]: *** [CMakeFiles/cmTC_46703.dir/build.make:99：cmTC_46703] 错误 1
+gmake[1]: 离开目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+gmake: *** [Makefile:127：cmTC_46703/fast] 错误 2
+
+
+
+Build output check failed:
+    Regex: 'command[- ]line option .* is valid for .* but not for C\+\+'
+    Output line: 'cc1plus: warning: command-line option ‘-Wno-missing-prototypes’ is valid for C/ObjC but not for C++'
+Compilation failed:
+    source file: '/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -Wno-missing-prototypes'
+===== BUILD LOG =====
+Change Dir: /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_693b8/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_693b8.dir/build.make CMakeFiles/cmTC_693b8.dir/build
+gmake[1]: 进入目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+Building CXX object CMakeFiles/cmTC_693b8.dir/src.cxx.o
+/usr/bin/g++-10   -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wundef -Winit-self -Wpointer-arith -Wshadow -Wsign-promo -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -Wno-long-long -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse -msse2 -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-missing-prototypes -std=c++11 -o CMakeFiles/cmTC_693b8.dir/src.cxx.o -c /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx
+cc1plus: warning: command-line option ‘-Wno-missing-prototypes’ is valid for C/ObjC but not for C++
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring ‘#pragma  ’ [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+Linking CXX executable cmTC_693b8
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_693b8.dir/link.txt --verbose=1
+/usr/bin/g++-10    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wundef -Winit-self -Wpointer-arith -Wshadow -Wsign-promo -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -Wno-long-long -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse -msse2 -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated  -O3 -DNDEBUG  -DNDEBUG   -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_693b8.dir/src.cxx.o -o cmTC_693b8 
+gmake[1]: 离开目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1plus: note: unrecognized command-line option ‘-Wno-tautological-undefined-compare’ may have been intended to silence earlier diagnostics'
+Compilation failed:
+    source file: '/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -Wno-tautological-undefined-compare'
+===== BUILD LOG =====
+Change Dir: /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_4e994/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_4e994.dir/build.make CMakeFiles/cmTC_4e994.dir/build
+gmake[1]: 进入目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+Building CXX object CMakeFiles/cmTC_4e994.dir/src.cxx.o
+/usr/bin/g++-10   -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -Wno-long-long -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse -msse2 -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated -Wno-missing-declarations -Wno-shadow -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-sign-compare -Wno-sign-promo -Wno-undef  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-tautological-undefined-compare -std=c++11 -o CMakeFiles/cmTC_4e994.dir/src.cxx.o -c /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring ‘#pragma  ’ [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1plus: note: unrecognized command-line option ‘-Wno-tautological-undefined-compare’ may have been intended to silence earlier diagnostics
+Linking CXX executable cmTC_4e994
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_4e994.dir/link.txt --verbose=1
+/usr/bin/g++-10    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -Wno-long-long -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse -msse2 -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated -Wno-missing-declarations -Wno-shadow -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-sign-compare -Wno-sign-promo -Wno-undef  -O3 -DNDEBUG  -DNDEBUG   -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_4e994.dir/src.cxx.o -o cmTC_4e994 
+gmake[1]: 离开目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1plus: note: unrecognized command-line option ‘-Wno-shorten-64-to-32’ may have been intended to silence earlier diagnostics'
+Compilation failed:
+    source file: '/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -Wno-shorten-64-to-32'
+===== BUILD LOG =====
+Change Dir: /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_a1e38/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_a1e38.dir/build.make CMakeFiles/cmTC_a1e38.dir/build
+gmake[1]: 进入目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+Building CXX object CMakeFiles/cmTC_a1e38.dir/src.cxx.o
+/usr/bin/g++-10   -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -Wno-long-long -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse -msse2 -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated -Wno-missing-declarations -Wno-shadow -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-sign-compare -Wno-sign-promo -Wno-undef -Wno-ignored-qualifiers -Wno-extra -Wno-unused-function -Wno-unused-const-variable  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-shorten-64-to-32 -std=c++11 -o CMakeFiles/cmTC_a1e38.dir/src.cxx.o -c /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring ‘#pragma  ’ [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1plus: note: unrecognized command-line option ‘-Wno-shorten-64-to-32’ may have been intended to silence earlier diagnostics
+Linking CXX executable cmTC_a1e38
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a1e38.dir/link.txt --verbose=1
+/usr/bin/g++-10    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -Wno-long-long -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse -msse2 -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated -Wno-missing-declarations -Wno-shadow -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-sign-compare -Wno-sign-promo -Wno-undef -Wno-ignored-qualifiers -Wno-extra -Wno-unused-function -Wno-unused-const-variable  -O3 -DNDEBUG  -DNDEBUG   -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_a1e38.dir/src.cxx.o -o cmTC_a1e38 
+gmake[1]: 离开目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1plus: note: unrecognized command-line option ‘-Wno-enum-compare-switch’ may have been intended to silence earlier diagnostics'
+Compilation failed:
+    source file: '/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -Wno-enum-compare-switch'
+===== BUILD LOG =====
+Change Dir: /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_d57a1/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_d57a1.dir/build.make CMakeFiles/cmTC_d57a1.dir/build
+gmake[1]: 进入目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+Building CXX object CMakeFiles/cmTC_d57a1.dir/src.cxx.o
+/usr/bin/g++-10   -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -Wno-long-long -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse -msse2 -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated -Wno-missing-declarations -Wno-shadow -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-sign-compare -Wno-sign-promo -Wno-undef -Wno-ignored-qualifiers -Wno-extra -Wno-unused-function -Wno-unused-const-variable -Wno-invalid-offsetof  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-enum-compare-switch -std=c++11 -o CMakeFiles/cmTC_d57a1.dir/src.cxx.o -c /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring ‘#pragma  ’ [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1plus: note: unrecognized command-line option ‘-Wno-enum-compare-switch’ may have been intended to silence earlier diagnostics
+Linking CXX executable cmTC_d57a1
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d57a1.dir/link.txt --verbose=1
+/usr/bin/g++-10    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -Wno-long-long -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse -msse2 -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated -Wno-missing-declarations -Wno-shadow -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-sign-compare -Wno-sign-promo -Wno-undef -Wno-ignored-qualifiers -Wno-extra -Wno-unused-function -Wno-unused-const-variable -Wno-invalid-offsetof  -O3 -DNDEBUG  -DNDEBUG   -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_d57a1.dir/src.cxx.o -o cmTC_d57a1 
+gmake[1]: 离开目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1plus: note: unrecognized command-line option ‘-Wno-inconsistent-missing-override’ may have been intended to silence earlier diagnostics'
+Compilation failed:
+    source file: '/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -Wno-inconsistent-missing-override'
+===== BUILD LOG =====
+Change Dir: /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_fbad0/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_fbad0.dir/build.make CMakeFiles/cmTC_fbad0.dir/build
+gmake[1]: 进入目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+Building CXX object CMakeFiles/cmTC_fbad0.dir/src.cxx.o
+/usr/bin/g++-10   -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wuninitialized -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -Wno-long-long -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse -msse2 -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated -Wno-missing-declarations -Wno-shadow -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-sign-compare -Wno-sign-promo -Wno-undef -Wno-ignored-qualifiers -Wno-extra -Wno-unused-function -Wno-unused-const-variable -Wno-invalid-offsetof -Wno-suggest-override  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-inconsistent-missing-override -std=c++11 -o CMakeFiles/cmTC_fbad0.dir/src.cxx.o -c /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring ‘#pragma  ’ [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1plus: note: unrecognized command-line option ‘-Wno-inconsistent-missing-override’ may have been intended to silence earlier diagnostics
+Linking CXX executable cmTC_fbad0
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_fbad0.dir/link.txt --verbose=1
+/usr/bin/g++-10    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wuninitialized -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -Wno-long-long -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse -msse2 -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated -Wno-missing-declarations -Wno-shadow -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-sign-compare -Wno-sign-promo -Wno-undef -Wno-ignored-qualifiers -Wno-extra -Wno-unused-function -Wno-unused-const-variable -Wno-invalid-offsetof -Wno-suggest-override  -O3 -DNDEBUG  -DNDEBUG   -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_fbad0.dir/src.cxx.o -o cmTC_fbad0 
+gmake[1]: 离开目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+
+
+===== END =====
+
+Determining if the include file sys/videoio.h exists failed with the following output:
+Change Dir: /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_9538e/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_9538e.dir/build.make CMakeFiles/cmTC_9538e.dir/build
+gmake[1]: 进入目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+Building C object CMakeFiles/cmTC_9538e.dir/CheckIncludeFile.c.o
+/usr/bin/gcc-10   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -Wno-long-long -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse -msse2 -msse3 -fvisibility=hidden  -O3 -DNDEBUG  -DNDEBUG -fPIE -o CMakeFiles/cmTC_9538e.dir/CheckIncludeFile.c.o -c /media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp/CheckIncludeFile.c:1:10: fatal error: sys/videoio.h: 没有那个文件或目录
+    1 | #include <sys/videoio.h>
+      |          ^~~~~~~~~~~~~~~
+compilation terminated.
+gmake[1]: *** [CMakeFiles/cmTC_9538e.dir/build.make:78：CMakeFiles/cmTC_9538e.dir/CheckIncludeFile.c.o] 错误 1
+gmake[1]: 离开目录“/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build/CMakeFiles/CMakeTmp”
+gmake: *** [Makefile:127：cmTC_9538e/fast] 错误 2
+
+
+

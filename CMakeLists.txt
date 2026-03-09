@@ -18,7 +18,7 @@ set(CAFFE2_USE_CUDNN on)
 # set(PYTHON_EXECUTABLE "/usr/bin/python3")
 
 find_package(Torch REQUIRED)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -pthread")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 
 # set(ENV{CUDA_LAUNCH_BLOCKING} 1)
 # set(ENV{TORCH_USE_CUDA_DSA} 1)

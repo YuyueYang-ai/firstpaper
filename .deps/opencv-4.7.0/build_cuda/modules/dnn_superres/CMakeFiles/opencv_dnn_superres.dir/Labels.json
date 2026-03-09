@@ -1,0 +1,48 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/dnn_superres/include/opencv2/dnn_superres.hpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_dnn_superres",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/dnn_superres/src/dnn_superres.cpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_dnn_superres",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/dnn_superres/src/precomp.hpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_dnn_superres",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build_cuda/cvconfig.h"
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build_cuda/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"Extra",
+			"opencv_dnn_superres",
+			"Module"
+		],
+		"name" : "opencv_dnn_superres"
+	}
+}

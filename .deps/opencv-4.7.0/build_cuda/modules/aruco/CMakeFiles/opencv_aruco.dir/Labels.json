@@ -1,0 +1,84 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/aruco/include/opencv2/aruco.hpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_aruco",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/aruco/include/opencv2/aruco/aruco_calib.hpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_aruco",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/aruco/include/opencv2/aruco/charuco.hpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_aruco",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/aruco/src/aruco.cpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_aruco",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/aruco/src/aruco_calib.cpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_aruco",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/aruco/src/charuco.cpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_aruco",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/aruco/src/precomp.hpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_aruco",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build_cuda/cvconfig.h"
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build_cuda/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"Extra",
+			"opencv_aruco",
+			"Module"
+		],
+		"name" : "opencv_aruco"
+	}
+}

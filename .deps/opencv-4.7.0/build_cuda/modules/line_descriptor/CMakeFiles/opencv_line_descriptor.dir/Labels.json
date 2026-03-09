@@ -1,0 +1,111 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/include/opencv2/line_descriptor.hpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_line_descriptor",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/include/opencv2/line_descriptor/descriptor.hpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_line_descriptor",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/src/LSDDetector.cpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_line_descriptor",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/src/binary_descriptor.cpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_line_descriptor",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/src/binary_descriptor_matcher.cpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_line_descriptor",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/src/draw.cpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_line_descriptor",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/src/bitarray.hpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_line_descriptor",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/src/bitops.hpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_line_descriptor",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/src/precomp.hpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_line_descriptor",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/src/types.hpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_line_descriptor",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build_cuda/cvconfig.h"
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build_cuda/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"Extra",
+			"opencv_line_descriptor",
+			"Module"
+		],
+		"name" : "opencv_line_descriptor"
+	}
+}

@@ -1,0 +1,102 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/fuzzy/include/opencv2/fuzzy.hpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_fuzzy",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/fuzzy/include/opencv2/fuzzy/fuzzy_F0_math.hpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_fuzzy",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/fuzzy/include/opencv2/fuzzy/fuzzy_F1_math.hpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_fuzzy",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/fuzzy/include/opencv2/fuzzy/fuzzy_image.hpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_fuzzy",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/fuzzy/include/opencv2/fuzzy/types.hpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_fuzzy",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/fuzzy/src/fuzzy_F0_math.cpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_fuzzy",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/fuzzy/src/fuzzy_F1_math.cpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_fuzzy",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/fuzzy/src/fuzzy_image.cpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_fuzzy",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/fuzzy/src/precomp.hpp",
+			"labels" : 
+			[
+				"Extra",
+				"opencv_fuzzy",
+				"Module"
+			]
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build_cuda/cvconfig.h"
+		},
+		{
+			"file" : "/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build_cuda/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"Extra",
+			"opencv_fuzzy",
+			"Module"
+		],
+		"name" : "opencv_fuzzy"
+	}
+}

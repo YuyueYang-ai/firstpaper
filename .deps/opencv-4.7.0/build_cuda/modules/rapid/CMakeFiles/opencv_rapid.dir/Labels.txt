@@ -1,0 +1,23 @@
+# Target labels
+ Extra
+ opencv_rapid
+ Module
+# Source files and their labels
+/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/rapid/include/opencv2/rapid.hpp
+ Extra
+ opencv_rapid
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/rapid/src/histogram.cpp
+ Extra
+ opencv_rapid
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/rapid/src/rapid.cpp
+ Extra
+ opencv_rapid
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/rapid/src/precomp.hpp
+ Extra
+ opencv_rapid
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build_cuda/cvconfig.h
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build_cuda/opencv2/opencv_modules.hpp

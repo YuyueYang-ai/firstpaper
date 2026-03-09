@@ -1,0 +1,47 @@
+# Target labels
+ Extra
+ opencv_line_descriptor
+ Module
+# Source files and their labels
+/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/include/opencv2/line_descriptor.hpp
+ Extra
+ opencv_line_descriptor
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/include/opencv2/line_descriptor/descriptor.hpp
+ Extra
+ opencv_line_descriptor
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/src/LSDDetector.cpp
+ Extra
+ opencv_line_descriptor
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/src/binary_descriptor.cpp
+ Extra
+ opencv_line_descriptor
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/src/binary_descriptor_matcher.cpp
+ Extra
+ opencv_line_descriptor
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/src/draw.cpp
+ Extra
+ opencv_line_descriptor
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/src/bitarray.hpp
+ Extra
+ opencv_line_descriptor
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/src/bitops.hpp
+ Extra
+ opencv_line_descriptor
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/src/precomp.hpp
+ Extra
+ opencv_line_descriptor
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv_contrib-4.7.0/modules/line_descriptor/src/types.hpp
+ Extra
+ opencv_line_descriptor
+ Module
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build_cuda/cvconfig.h
+/media/yunxiangyang/Train/omniGS/.deps/opencv-4.7.0/build_cuda/opencv2/opencv_modules.hpp
