@@ -41,6 +41,12 @@
 
 # results
 /results/
+/no_viewer/
+/results_smoke/
+/results_smoke_eval_200/
 
 # ImGui .ini
 *imgui.ini
+
+# local build outputs
+/build_compact_check/

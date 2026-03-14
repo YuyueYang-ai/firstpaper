@@ -113,6 +113,11 @@ add_library(gaussian_mapper SHARED
     third_party/tinyply/tinyply.h
     third_party/tinyply/tinyply.cpp
     include/gaussian_keyframe.h
+    include/compact_gaussian.h
+    include/pruning_policy.h
+    include/sh_bandwidth.h
+    include/attribute_sort.h
+    include/gaussian_codec.h
     include/gaussian_model.h
     include/gaussian_parameters.h
     include/gaussian_rasterizer.h
@@ -131,11 +136,15 @@ add_library(gaussian_mapper SHARED
     include/point3d.h
     include/types.h
     src/gaussian_keyframe.cpp
+    src/attribute_sort.cpp
+    src/gaussian_codec.cpp
     src/gaussian_model.cpp
     src/gaussian_parameters.cpp
     src/gaussian_rasterizer.cpp
     src/gaussian_renderer.cpp
     src/gaussian_scene.cpp
+    src/pruning_policy.cpp
+    src/sh_bandwidth.cpp
     src/gaussian_trainer.cpp
     src/gaussian_mapper.cpp)
 target_link_libraries(gaussian_mapper

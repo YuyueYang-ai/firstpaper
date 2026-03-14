@@ -210,6 +210,41 @@ void GaussianMapper::readConfigFromFile(std::filesystem::path cfg_path)
     skip_bottom_ratio_ =
         settings_file["Optimization.skip_bottom_ratio"].operator float();
 
+    if (!settings_file["Compression.save_compact_snapshot"].empty())
+        save_compact_snapshot_ = (settings_file["Compression.save_compact_snapshot"].operator int()) != 0;
+    if (!settings_file["Compression.late_stage_prune_interval"].empty())
+        late_stage_prune_interval_ = settings_file["Compression.late_stage_prune_interval"].operator int();
+    if (!settings_file["Compression.late_stage_prune_min_opacity"].empty())
+        late_stage_prune_min_opacity_ = settings_file["Compression.late_stage_prune_min_opacity"].operator float();
+    if (!settings_file["Compression.late_stage_prune_big_point_min_opacity"].empty())
+        late_stage_prune_big_point_min_opacity_ = settings_file["Compression.late_stage_prune_big_point_min_opacity"].operator float();
+    if (!settings_file["Compression.late_stage_prune_max_scaling_ratio"].empty())
+        late_stage_prune_max_scaling_ratio_ = settings_file["Compression.late_stage_prune_max_scaling_ratio"].operator float();
+    if (!settings_file["Compression.adaptive_sh_bandwidth_interval"].empty())
+        adaptive_sh_bandwidth_interval_ = settings_file["Compression.adaptive_sh_bandwidth_interval"].operator int();
+    if (!settings_file["Compression.adaptive_sh_energy_keep_ratio"].empty())
+        adaptive_sh_energy_keep_ratio_ = settings_file["Compression.adaptive_sh_energy_keep_ratio"].operator float();
+    if (!settings_file["Compression.adaptive_sh_min_opacity"].empty())
+        adaptive_sh_min_opacity_ = settings_file["Compression.adaptive_sh_min_opacity"].operator float();
+    if (!settings_file["Compression.enable_export_prune"].empty())
+        compact_export_options_.enable_export_prune = (settings_file["Compression.enable_export_prune"].operator int()) != 0;
+    if (!settings_file["Compression.enable_sh_bandwidth"].empty())
+        compact_export_options_.enable_sh_bandwidth = (settings_file["Compression.enable_sh_bandwidth"].operator int()) != 0;
+    if (!settings_file["Compression.sort_by_morton"].empty())
+        compact_export_options_.sort_by_morton = (settings_file["Compression.sort_by_morton"].operator int()) != 0;
+    if (!settings_file["Compression.xyz_quant_bits"].empty())
+        compact_export_options_.xyz_quant_bits = settings_file["Compression.xyz_quant_bits"].operator int();
+    if (!settings_file["Compression.attribute_quant_bits"].empty())
+        compact_export_options_.attribute_quant_bits = settings_file["Compression.attribute_quant_bits"].operator int();
+    if (!settings_file["Compression.rotation_quant_bits"].empty())
+        compact_export_options_.rotation_quant_bits = settings_file["Compression.rotation_quant_bits"].operator int();
+
+    compact_export_options_.prune_min_opacity = late_stage_prune_min_opacity_;
+    compact_export_options_.prune_big_point_min_opacity = late_stage_prune_big_point_min_opacity_;
+    compact_export_options_.prune_max_scaling_ratio = late_stage_prune_max_scaling_ratio_;
+    compact_export_options_.sh_energy_keep_ratio = adaptive_sh_energy_keep_ratio_;
+    compact_export_options_.sh_min_opacity = adaptive_sh_min_opacity_;
+
     // Viewer Parameters
     rendered_image_viewer_scale_ =
         settings_file["GaussianViewer.image_scale"].operator float();
@@ -439,10 +474,24 @@ void GaussianMapper::trainForOneIteration()
                 );
             }
 
-            if (opacityResetInterval()
-                && (getIteration() % opacityResetInterval() == 0
-                    ||(model_params_.white_background_ && getIteration() == opt_params_.densify_from_iter_)))
-                gaussians_->resetOpacity();
+                if (opacityResetInterval()
+                    && (getIteration() % opacityResetInterval() == 0
+                        ||(model_params_.white_background_ && getIteration() == opt_params_.densify_from_iter_)))
+                    gaussians_->resetOpacity();
+        }
+        else {
+            if (late_stage_prune_interval_ > 0 && getIteration() % late_stage_prune_interval_ == 0) {
+                gaussians_->pruneLowImportanceGaussians(
+                    late_stage_prune_min_opacity_,
+                    late_stage_prune_big_point_min_opacity_,
+                    late_stage_prune_max_scaling_ratio_,
+                    scene_->cameras_extent_);
+            }
+            if (adaptive_sh_bandwidth_interval_ > 0 && getIteration() % adaptive_sh_bandwidth_interval_ == 0) {
+                gaussians_->updateAdaptiveShBandwidth(
+                    adaptive_sh_energy_keep_ratio_,
+                    adaptive_sh_min_opacity_);
+            }
         }
 
         auto iter_end_timing = std::chrono::steady_clock::now();
@@ -861,6 +910,22 @@ void GaussianMapper::savePly(std::filesystem::path result_dir)
     CHECK_DIRECTORY_AND_CREATE_IF_NOT_EXISTS(ply_dir)
 
     gaussians_->savePly(ply_dir / "point_cloud.ply");
+
+    if (save_compact_snapshot_)
+        saveCompact(result_dir);
+}
+
+void GaussianMapper::saveCompact(std::filesystem::path result_dir)
+{
+    CHECK_DIRECTORY_AND_CREATE_IF_NOT_EXISTS(result_dir)
+
+    std::filesystem::path compact_dir = result_dir / "compact";
+    CHECK_DIRECTORY_AND_CREATE_IF_NOT_EXISTS(compact_dir)
+
+    compact_dir = compact_dir / ("iteration_" + std::to_string(getIteration()));
+    CHECK_DIRECTORY_AND_CREATE_IF_NOT_EXISTS(compact_dir)
+
+    gaussians_->saveCompact(compact_dir, scene_->cameras_extent_, compact_export_options_);
 }
 
 void GaussianMapper::keyframesToJson(std::filesystem::path result_dir)

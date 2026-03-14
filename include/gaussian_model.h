@@ -42,6 +42,7 @@
 #include "sh_utils.h"
 #include "tensor_utils.h"
 #include "gaussian_parameters.h"
+#include "compact_gaussian.h"
 
 #define GAUSSIAN_MODEL_TENSORS_TO_VEC                        \
     this->Tensor_vec_xyz_ = {this->xyz_};                    \
@@ -58,6 +59,7 @@
     this->scaling_ = torch::empty(0, torch::TensorOptions().device(device_type));            \
     this->rotation_ = torch::empty(0, torch::TensorOptions().device(device_type));           \
     this->opacity_ = torch::empty(0, torch::TensorOptions().device(device_type));            \
+    this->sh_levels_ = torch::empty(0, torch::TensorOptions().device(device_type).dtype(torch::kInt32)); \
     this->max_radii2D_ = torch::empty(0, torch::TensorOptions().device(device_type));        \
     this->xyz_gradient_accum_ = torch::empty(0, torch::TensorOptions().device(device_type)); \
     this->denom_ = torch::empty(0, torch::TensorOptions().device(device_type));              \
@@ -152,8 +154,21 @@ public:
 // void increasePointsIterationsOfExistence(const int i = 1);
 
     void loadPly(std::filesystem::path ply_path);
+    void loadCompact(std::filesystem::path compact_path);
+    void loadCompactDecoded(const DecodedGaussianTensors& decoded);
     void savePly(std::filesystem::path result_path);
+    void saveCompact(
+        std::filesystem::path result_path,
+        float scene_extent,
+        const CompactExportOptions& options = CompactExportOptions());
     void saveSparsePointsPly(std::filesystem::path result_path);
+
+    void updateAdaptiveShBandwidth(float energy_keep_ratio, float min_opacity);
+    void pruneLowImportanceGaussians(
+        float min_opacity,
+        float big_point_min_opacity,
+        float max_scaling_ratio,
+        float scene_extent);
 
     float percentDense();
     void setPercentDense(const float percent_dense);
@@ -173,6 +188,7 @@ public:
     torch::Tensor scaling_;
     torch::Tensor rotation_;
     torch::Tensor opacity_;
+    torch::Tensor sh_levels_;
     torch::Tensor max_radii2D_;
     torch::Tensor xyz_gradient_accum_;
     torch::Tensor denom_;

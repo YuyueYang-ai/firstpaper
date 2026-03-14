@@ -46,6 +46,7 @@
 #include "operate_points.h"
 #include "stereo_vision.h"
 #include "tensor_utils.h"
+#include "compact_gaussian.h"
 #include "gaussian_keyframe.h"
 #include "gaussian_scene.h"
 #include "gaussian_trainer.h"
@@ -201,6 +202,7 @@ protected:
         bool render_depth = false);
 
     void savePly(std::filesystem::path result_dir);
+    void saveCompact(std::filesystem::path result_dir);
     void keyframesToJson(std::filesystem::path result_dir);
     void saveModelParams(std::filesystem::path result_dir);
     void writeKeyframeUsedTimes(std::filesystem::path result_dir, std::string name_suffix = "");
@@ -302,6 +304,18 @@ protected:
     float densify_min_opacity_ = 20;
 
     float skip_bottom_ratio_ = 0.0f;
+
+    int late_stage_prune_interval_ = 1000;
+    float late_stage_prune_min_opacity_ = 0.008f;
+    float late_stage_prune_big_point_min_opacity_ = 0.02f;
+    float late_stage_prune_max_scaling_ratio_ = 0.15f;
+
+    int adaptive_sh_bandwidth_interval_ = 500;
+    float adaptive_sh_energy_keep_ratio_ = 0.995f;
+    float adaptive_sh_min_opacity_ = 0.01f;
+
+    bool save_compact_snapshot_ = true;
+    CompactExportOptions compact_export_options_;
 
     bool prune_by_extent_ = true;
 

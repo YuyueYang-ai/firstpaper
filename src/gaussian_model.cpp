@@ -21,6 +21,11 @@
 
 #include "include/gaussian_model.h"
 
+#include "include/attribute_sort.h"
+#include "include/gaussian_codec.h"
+#include "include/pruning_policy.h"
+#include "include/sh_bandwidth.h"
+
 GaussianModel::GaussianModel(const int sh_degree)
     : active_sh_degree_(0), spatial_lr_scale_(0.0),
       lr_delay_steps_(0), lr_delay_mult_(1.0), max_steps_(1000000)
@@ -68,7 +73,14 @@ torch::Tensor GaussianModel::getXYZ()
 
 torch::Tensor GaussianModel::getFeatures()
 {
-    return torch::cat({this->features_dc_.clone(), this->features_rest_.clone()}, /*dim=*/1);
+    if (!this->sh_levels_.defined() || this->sh_levels_.numel() == 0 || this->features_rest_.numel() == 0)
+        return torch::cat({this->features_dc_.clone(), this->features_rest_.clone()}, /*dim=*/1);
+
+    auto masked_rest = sh_bandwidth::applyLevelsToFeaturesRest(
+        this->features_rest_,
+        this->sh_levels_,
+        this->max_sh_degree_);
+    return torch::cat({this->features_dc_.clone(), masked_rest}, /*dim=*/1);
 }
 
 torch::Tensor GaussianModel::getOpacityActivation()
@@ -190,6 +202,10 @@ void GaussianModel::createFromPcd(
     this->scaling_ = scales.requires_grad_();
     this->rotation_ = rots.requires_grad_();
     this->opacity_ = opacities.requires_grad_();
+    this->sh_levels_ = torch::full(
+        {fused_point_cloud.size(0)},
+        this->max_sh_degree_,
+        torch::TensorOptions().dtype(torch::kInt32).device(device_type_));
 
     GAUSSIAN_MODEL_TENSORS_TO_VEC
 
@@ -651,6 +667,8 @@ void GaussianModel::prunePoints(torch::Tensor& mask)
     GAUSSIAN_MODEL_TENSORS_TO_VEC
 
     this->exist_since_iter_ = this->exist_since_iter_.index({valid_points_mask});
+    if (this->sh_levels_.defined() && this->sh_levels_.numel() != 0)
+        this->sh_levels_ = this->sh_levels_.index({valid_points_mask});
 
     this->xyz_gradient_accum_ = this->xyz_gradient_accum_.index({valid_points_mask});
 
@@ -724,6 +742,14 @@ void GaussianModel::densificationPostfix(
     GAUSSIAN_MODEL_TENSORS_TO_VEC
 
     this->exist_since_iter_ = torch::cat({this->exist_since_iter_, new_exist_since_iter}, /*dim=*/0);
+    auto new_sh_levels = torch::full(
+        {new_xyz.size(0)},
+        this->max_sh_degree_,
+        torch::TensorOptions().dtype(torch::kInt32).device(device_type_));
+    if (!this->sh_levels_.defined() || this->sh_levels_.numel() == 0)
+        this->sh_levels_ = new_sh_levels;
+    else
+        this->sh_levels_ = torch::cat({this->sh_levels_, new_sh_levels}, /*dim=*/0);
 
     this->xyz_gradient_accum_ = torch::zeros({this->getXYZ().size(0), 1}, torch::TensorOptions().device(device_type_));
     this->denom_ = torch::zeros({this->getXYZ().size(0), 1}, torch::TensorOptions().device(device_type_));
@@ -969,10 +995,146 @@ void GaussianModel::loadPly(std::filesystem::path ply_path)
     this->rotation_ = torch::from_blob(
         rot_vector.data(), {num_points, 4},
         torch::TensorOptions().dtype(torch::kFloat32)).to(device_type_);
+    this->sh_levels_ = torch::full(
+        {num_points},
+        this->max_sh_degree_,
+        torch::TensorOptions().dtype(torch::kInt32).device(device_type_));
 
     GAUSSIAN_MODEL_TENSORS_TO_VEC
 
     this->active_sh_degree_ = this->max_sh_degree_;
+}
+
+void GaussianModel::loadCompact(std::filesystem::path compact_path)
+{
+    auto decoded = GaussianCodec::load(compact_path, device_type_);
+    loadCompactDecoded(decoded);
+}
+
+void GaussianModel::loadCompactDecoded(const DecodedGaussianTensors& decoded)
+{
+    if (decoded.empty())
+        throw std::runtime_error("Cannot load empty compact Gaussian tensors.");
+
+    this->max_sh_degree_ = decoded.max_sh_degree;
+    this->active_sh_degree_ = decoded.active_sh_degree;
+
+    this->xyz_ = decoded.xyz.to(device_type_);
+    this->features_dc_ = decoded.features_dc.to(device_type_);
+    this->features_rest_ = decoded.features_rest.to(device_type_);
+    this->opacity_ = decoded.opacity.to(device_type_);
+    this->scaling_ = decoded.scaling.to(device_type_);
+    this->rotation_ = decoded.rotation.to(device_type_);
+    this->sh_levels_ = decoded.sh_levels.to(device_type_).to(torch::kInt32);
+    this->exist_since_iter_ = torch::zeros(
+        {this->xyz_.size(0)},
+        torch::TensorOptions().dtype(torch::kInt32).device(device_type_));
+
+    GAUSSIAN_MODEL_TENSORS_TO_VEC
+
+    this->max_radii2D_ = torch::zeros({this->getXYZ().size(0)}, torch::TensorOptions().device(device_type_));
+    this->xyz_gradient_accum_ = torch::zeros({this->getXYZ().size(0), 1}, torch::TensorOptions().device(device_type_));
+    this->denom_ = torch::zeros({this->getXYZ().size(0), 1}, torch::TensorOptions().device(device_type_));
+}
+
+void GaussianModel::saveCompact(
+    std::filesystem::path result_path,
+    float scene_extent,
+    const CompactExportOptions& options)
+{
+    std::filesystem::create_directories(result_path);
+
+    auto xyz = this->xyz_.detach();
+    auto features_dc = this->features_dc_.detach();
+    auto features_rest = this->features_rest_.detach();
+    auto opacity = this->opacity_.detach();
+    auto scaling = this->scaling_.detach();
+    auto rotation = this->rotation_.detach();
+    auto sh_levels = (this->sh_levels_.defined() && this->sh_levels_.numel() != 0)
+                         ? this->sh_levels_.detach().to(torch::kInt32)
+                         : torch::full(
+                               {xyz.size(0)},
+                               this->max_sh_degree_,
+                               torch::TensorOptions().dtype(torch::kInt32).device(device_type_));
+
+    if (options.enable_export_prune) {
+        auto prune_mask = pruning_policy::buildCompactExportMask(*this, scene_extent, options);
+        auto keep_mask = ~prune_mask;
+        if (keep_mask.any().item<bool>()) {
+            xyz = xyz.index({keep_mask});
+            features_dc = features_dc.index({keep_mask});
+            features_rest = features_rest.index({keep_mask});
+            opacity = opacity.index({keep_mask});
+            scaling = scaling.index({keep_mask});
+            rotation = rotation.index({keep_mask});
+            sh_levels = sh_levels.index({keep_mask});
+        }
+    }
+
+    if (options.enable_sh_bandwidth) {
+        sh_levels = sh_bandwidth::estimateLevels(
+            features_rest,
+            torch::sigmoid(opacity),
+            this->max_sh_degree_,
+            options.sh_energy_keep_ratio,
+            options.sh_min_opacity);
+    }
+
+    features_rest = sh_bandwidth::applyLevelsToFeaturesRest(features_rest, sh_levels, this->max_sh_degree_);
+
+    if (options.sort_by_morton && xyz.size(0) > 1) {
+        auto order = attribute_sort::mortonOrder(xyz);
+        xyz = xyz.index({order});
+        features_dc = features_dc.index({order});
+        features_rest = features_rest.index({order});
+        opacity = opacity.index({order});
+        scaling = scaling.index({order});
+        rotation = rotation.index({order});
+        sh_levels = sh_levels.index({order});
+    }
+
+    DecodedGaussianTensors decoded;
+    decoded.max_sh_degree = this->max_sh_degree_;
+    decoded.active_sh_degree = this->active_sh_degree_;
+    decoded.xyz = xyz;
+    decoded.features_dc = features_dc.view({features_dc.size(0), 3});
+    decoded.features_rest = features_rest;
+    decoded.opacity = opacity;
+    decoded.scaling = scaling;
+    decoded.rotation = rotation;
+    decoded.sh_levels = sh_levels;
+
+    GaussianCodec::save(decoded, result_path, options);
+}
+
+void GaussianModel::updateAdaptiveShBandwidth(float energy_keep_ratio, float min_opacity)
+{
+    torch::NoGradGuard no_grad;
+    if (this->max_sh_degree_ <= 0 || this->features_rest_.numel() == 0)
+        return;
+
+    this->sh_levels_ = sh_bandwidth::estimateLevels(
+        this->features_rest_,
+        this->getOpacityActivation(),
+        this->max_sh_degree_,
+        energy_keep_ratio,
+        min_opacity);
+}
+
+void GaussianModel::pruneLowImportanceGaussians(
+    float min_opacity,
+    float big_point_min_opacity,
+    float max_scaling_ratio,
+    float scene_extent)
+{
+    torch::NoGradGuard no_grad;
+    CompactExportOptions options;
+    options.prune_min_opacity = min_opacity;
+    options.prune_big_point_min_opacity = big_point_min_opacity;
+    options.prune_max_scaling_ratio = max_scaling_ratio;
+    auto prune_mask = pruning_policy::buildCompactExportMask(*this, scene_extent, options);
+    if (prune_mask.any().item<bool>())
+        this->prunePoints(prune_mask);
 }
 
 void GaussianModel::savePly(std::filesystem::path result_path)
