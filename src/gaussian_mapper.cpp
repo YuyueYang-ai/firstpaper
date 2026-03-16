@@ -193,12 +193,23 @@ void GaussianMapper::readConfigFromFile(std::filesystem::path cfg_path)
         settings_file["Optimization.densification_interval"].operator int();
     opt_params_.opacity_reset_interval_ =
         settings_file["Optimization.opacity_reset_interval"].operator int();
-    opt_params_.densify_from_iter_ =
-        settings_file["Optimization.densify_from_iter_"].operator int();
+    if (!settings_file["Optimization.densify_from_iter"].empty()) {
+        opt_params_.densify_from_iter_ =
+            settings_file["Optimization.densify_from_iter"].operator int();
+    }
+    else {
+        opt_params_.densify_from_iter_ =
+            settings_file["Optimization.densify_from_iter_"].operator int();
+    }
     opt_params_.densify_until_iter_ =
         settings_file["Optimization.densify_until_iter"].operator int();
     opt_params_.densify_grad_threshold_ =
         settings_file["Optimization.densify_grad_threshold"].operator float();
+    if (!settings_file["Optimization.densify_abs_grad_threshold"].empty())
+        opt_params_.densify_abs_grad_threshold_ =
+            settings_file["Optimization.densify_abs_grad_threshold"].operator float();
+    else
+        opt_params_.densify_abs_grad_threshold_ = 5.0f * opt_params_.densify_grad_threshold_;
 
     prune_big_point_after_iter_ =
         settings_file["Optimization.prune_big_point_after_iter"].operator int();
@@ -467,6 +478,7 @@ void GaussianMapper::trainForOneIteration()
                 int size_threshold = (getIteration() > prune_big_point_after_iter_) ? 20 : 0;
                 gaussians_->densifyAndPrune(
                     densifyGradThreshold(),
+                    densifyAbsGradThreshold(),
                     densify_min_opacity_,//0.005,//
                     scene_->cameras_extent_,
                     size_threshold,
@@ -1085,6 +1097,11 @@ float GaussianMapper::densifyGradThreshold()
     std::unique_lock<std::mutex> lock(mutex_settings_);
     return opt_params_.densify_grad_threshold_;
 }
+float GaussianMapper::densifyAbsGradThreshold()
+{
+    std::unique_lock<std::mutex> lock(mutex_settings_);
+    return opt_params_.densify_abs_grad_threshold_;
+}
 int GaussianMapper::densifyInterval()
 {
     std::unique_lock<std::mutex> lock(mutex_settings_);
@@ -1162,6 +1179,11 @@ void GaussianMapper::setDensifyGradThreshold(const float th)
     std::unique_lock<std::mutex> lock(mutex_settings_);
     opt_params_.densify_grad_threshold_ = th;
 }
+void GaussianMapper::setDensifyAbsGradThreshold(const float th)
+{
+    std::unique_lock<std::mutex> lock(mutex_settings_);
+    opt_params_.densify_abs_grad_threshold_ = th;
+}
 void GaussianMapper::setDensifyInterval(const int interval)
 {
     std::unique_lock<std::mutex> lock(mutex_settings_);
@@ -1206,6 +1228,7 @@ VariableParameters GaussianMapper::getVaribleParameters()
     params.lambda_dssim = opt_params_.lambda_dssim_;
     params.opacity_reset_interval = opt_params_.opacity_reset_interval_;
     params.densify_grad_th = opt_params_.densify_grad_threshold_;
+    params.densify_abs_grad_th = opt_params_.densify_abs_grad_threshold_;
     params.densify_interval = opt_params_.densification_interval_;
     params.new_kf_times_of_use = new_keyframe_times_of_use_;
     params.stable_num_iter_existence = stable_num_iter_existence_;
@@ -1228,6 +1251,7 @@ void GaussianMapper::setVaribleParameters(const VariableParameters &params)
     opt_params_.lambda_dssim_ = params.lambda_dssim;
     opt_params_.opacity_reset_interval_ = params.opacity_reset_interval;
     opt_params_.densify_grad_threshold_ = params.densify_grad_th;
+    opt_params_.densify_abs_grad_threshold_ = params.densify_abs_grad_th;
     opt_params_.densification_interval_ = params.densify_interval;
     new_keyframe_times_of_use_ = params.new_kf_times_of_use;
     stable_num_iter_existence_ = params.stable_num_iter_existence;

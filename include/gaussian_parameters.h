@@ -80,7 +80,8 @@ public:
         int opacity_reset_interval = 3000,
         int densify_from_iter = 500,
         int densify_until_iter = 15'000,
-        float densify_grad_threshold = 0.0002f);
+        float densify_grad_threshold = 0.0002f,
+        float densify_abs_grad_threshold = 0.001f);
 
 public:
     int iterations_;
@@ -99,4 +100,5 @@ public:
     int densify_from_iter_;
     int densify_until_iter_;
     float densify_grad_threshold_;
+    float densify_abs_grad_threshold_;
 };

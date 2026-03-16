@@ -69,7 +69,8 @@ GaussianOptimizationParams::GaussianOptimizationParams(
     int opacity_reset_interval,
     int densify_from_iter,
     int densify_until_iter,
-    float densify_grad_threshold)
+    float densify_grad_threshold,
+    float densify_abs_grad_threshold)
     : iterations_(iterations),
       position_lr_init_(position_lr_init),
       position_lr_final_(position_lr_final),
@@ -85,5 +86,6 @@ GaussianOptimizationParams::GaussianOptimizationParams(
       opacity_reset_interval_(opacity_reset_interval),
       densify_from_iter_(densify_from_iter),
       densify_until_iter_(densify_until_iter),
-      densify_grad_threshold_(densify_grad_threshold)
+      densify_grad_threshold_(densify_grad_threshold),
+      densify_abs_grad_threshold_(densify_abs_grad_threshold)
 {}

@@ -1,0 +1,2 @@
+abs_th,final_ema_loss,final_num_points,train_avg_psnr,train_avg_ssim,train_avg_render_ms,test_avg_psnr,test_avg_ssim,test_avg_render_ms,peak_reserved_mb,peak_allocated_mb,shutdown_dir,test_dir
+0.0007,0.08881183,230860,22.608590,0.725752,5.451912,19.429986,0.670950,5.614086,5050,3729.46,/media/yunxiangyang/Train/PanoCompactGS/omniGS/results_ablation/office_8k_abs_th/abs_0p0007/8081_shutdown,/media/yunxiangyang/Train/PanoCompactGS/omniGS/results_ablation/office_8k_abs_th/abs_0p0007/test_final/0_test

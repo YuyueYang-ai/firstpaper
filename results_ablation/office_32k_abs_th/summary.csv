@@ -1,0 +1,4 @@
+abs_th,final_ema_loss,final_num_points,train_avg_psnr,train_avg_dssim,train_avg_render_ms,test_avg_psnr,test_avg_dssim,test_avg_render_ms,peak_reserved_mb,peak_allocated_mb,shutdown_dir
+0.001,0.06529634,251634,24.972252,0.768842,6.604434,19.118120,0.668977,6.475876,9628,3808.47,/media/yunxiangyang/Train/PanoCompactGS/omniGS/results_ablation/office_32k_abs_th/abs_0p001/32081_shutdown
+0.0004,0.05281205,587279,27.292640,0.834968,9.331978,18.852483,0.655611,9.627993,21342,4362.47,/media/yunxiangyang/Train/PanoCompactGS/omniGS/results_ablation/office_32k_abs_th/abs_0p0004/32081_shutdown
+0.0007,0.06683299,356057,25.901802,0.793406,7.478232,19.071614,0.665447,7.369671,13332,3996.44,/media/yunxiangyang/Train/PanoCompactGS/omniGS/results_ablation/office_32k_abs_th/abs_0p0007/32081_shutdown

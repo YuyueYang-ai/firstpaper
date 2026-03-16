@@ -70,6 +70,7 @@ Optimization.densify_min_opacity: 0.005
 Optimization.densify_from_iter: 500
 Optimization.densify_until_iter: 15000
 Optimization.densify_grad_threshold: 0.0002
+Optimization.densify_abs_grad_threshold: 0.001
 Optimization.prune_by_extent: 0
 
 Optimization.skip_bottom_ratio: 0.0

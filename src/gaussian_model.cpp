@@ -502,6 +502,7 @@ void GaussianModel::trainingSetup(const GaussianOptimizationParams& training_arg
 {
     setPercentDense(training_args.percent_dense_);
     this->xyz_gradient_accum_ = torch::zeros({this->getXYZ().size(0), 1}, torch::TensorOptions().device(device_type_));
+    this->xyz_gradient_accum_abs_ = torch::zeros({this->getXYZ().size(0), 1}, torch::TensorOptions().device(device_type_));
     this->denom_ = torch::zeros({this->getXYZ().size(0), 1}, torch::TensorOptions().device(device_type_));
 
     torch::optim::AdamOptions adam_options;
@@ -671,7 +672,7 @@ void GaussianModel::prunePoints(torch::Tensor& mask)
         this->sh_levels_ = this->sh_levels_.index({valid_points_mask});
 
     this->xyz_gradient_accum_ = this->xyz_gradient_accum_.index({valid_points_mask});
-
+    this->xyz_gradient_accum_abs_ = this->xyz_gradient_accum_abs_.index({valid_points_mask});
     this->denom_ = this->denom_.index({valid_points_mask});
     this->max_radii2D_ = this->max_radii2D_.index({valid_points_mask});
 }
@@ -752,6 +753,7 @@ void GaussianModel::densificationPostfix(
         this->sh_levels_ = torch::cat({this->sh_levels_, new_sh_levels}, /*dim=*/0);
 
     this->xyz_gradient_accum_ = torch::zeros({this->getXYZ().size(0), 1}, torch::TensorOptions().device(device_type_));
+    this->xyz_gradient_accum_abs_ = torch::zeros({this->getXYZ().size(0), 1}, torch::TensorOptions().device(device_type_));
     this->denom_ = torch::zeros({this->getXYZ().size(0), 1}, torch::TensorOptions().device(device_type_));
     this->max_radii2D_ = torch::zeros({this->getXYZ().size(0)}, torch::TensorOptions().device(device_type_));
 }
@@ -837,6 +839,7 @@ void GaussianModel::densifyAndClone(
 
 void GaussianModel::densifyAndPrune(
     float max_grad,
+    float max_abs_grad,
     float min_opacity,
     float extent,
     int max_screen_size,
@@ -844,8 +847,10 @@ void GaussianModel::densifyAndPrune(
 {
     auto grads = this->xyz_gradient_accum_ / this->denom_;
     grads.index_put_({grads.isnan()}, 0.0f);
+    auto grads_abs = this->xyz_gradient_accum_abs_ / this->denom_;
+    grads_abs.index_put_({grads_abs.isnan()}, 0.0f);
     this->densifyAndClone(grads, max_grad, extent);
-    this->densifyAndSplit(grads, max_grad, extent);
+    this->densifyAndSplit(grads_abs, max_abs_grad, extent);
 
     auto prune_mask = (this->getOpacityActivation() < min_opacity).squeeze();
     if (max_screen_size) {
@@ -869,6 +874,12 @@ void GaussianModel::addDensificationStats(
     this->xyz_gradient_accum_.index_put_(
         {update_filter},
         torch::frobenius_norm(viewspace_point_tensor.grad().index({update_filter, torch::indexing::Slice(0, 2)}),
+                              /*dim=*/-1,
+                              /*keepdim=*/true),
+        /*accumulate=*/true);
+    this->xyz_gradient_accum_abs_.index_put_(
+        {update_filter},
+        torch::frobenius_norm(viewspace_point_tensor.grad().index({update_filter, torch::indexing::Slice(2, 4)}),
                               /*dim=*/-1,
                               /*keepdim=*/true),
         /*accumulate=*/true);
@@ -1034,6 +1045,7 @@ void GaussianModel::loadCompactDecoded(const DecodedGaussianTensors& decoded)
 
     this->max_radii2D_ = torch::zeros({this->getXYZ().size(0)}, torch::TensorOptions().device(device_type_));
     this->xyz_gradient_accum_ = torch::zeros({this->getXYZ().size(0), 1}, torch::TensorOptions().device(device_type_));
+    this->xyz_gradient_accum_abs_ = torch::zeros({this->getXYZ().size(0), 1}, torch::TensorOptions().device(device_type_));
     this->denom_ = torch::zeros({this->getXYZ().size(0), 1}, torch::TensorOptions().device(device_type_));
 }
 

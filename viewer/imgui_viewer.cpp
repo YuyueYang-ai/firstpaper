@@ -130,6 +130,7 @@ void ImGuiViewer::readConfigFromFile(std::filesystem::path cfg_path)
     lambda_dssim_ = pGausMapper_->lambdaDssim();
     opacity_reset_interval_ = pGausMapper_->opacityResetInterval();
     densify_grad_th_ = pGausMapper_->densifyGradThreshold();
+    densify_abs_grad_th_ = pGausMapper_->densifyAbsGradThreshold();
     densify_interval_ = pGausMapper_->densifyInterval();
     new_kf_times_of_use_ = pGausMapper_->newKeyframeTimesOfUse();
     stable_num_iter_existence_ = pGausMapper_->stableNumIterExistence();
@@ -280,6 +281,7 @@ void ImGuiViewer::run()
         lambda_dssim_ = params_in.lambda_dssim;
         opacity_reset_interval_ = params_in.opacity_reset_interval;
         densify_grad_th_ = params_in.densify_grad_th;
+        densify_abs_grad_th_ = params_in.densify_abs_grad_th;
         densify_interval_ = params_in.densify_interval;
         new_kf_times_of_use_ = params_in.new_kf_times_of_use;
         stable_num_iter_existence_ = params_in.stable_num_iter_existence;
@@ -321,6 +323,7 @@ void ImGuiViewer::run()
                 ImGui::SliderFloat("Lambda dssim", &lambda_dssim_, 0.01f, 0.40f, "%.2f");
                 ImGui::SliderInt("Opacity reset", &opacity_reset_interval_, 0, 6000);
                 ImGui::SliderFloat("Densify grad th.", &densify_grad_th_, 0.0001f, 0.0020f, "%.5f");
+                ImGui::SliderFloat("Split grad th.", &densify_abs_grad_th_, 0.0001f, 0.0040f, "%.5f");
                 ImGui::SliderInt("Densify int.", &densify_interval_, 1, 400);
 
                 ImGui::End();
@@ -336,6 +339,7 @@ void ImGuiViewer::run()
         params_out.lambda_dssim = lambda_dssim_;
         params_out.opacity_reset_interval = opacity_reset_interval_;
         params_out.densify_grad_th = densify_grad_th_;
+        params_out.densify_abs_grad_th = densify_abs_grad_th_;
         params_out.densify_interval = densify_interval_;
         params_out.new_kf_times_of_use = new_kf_times_of_use_;
         params_out.stable_num_iter_existence = stable_num_iter_existence_;

@@ -118,6 +118,7 @@ protected:
     float lambda_dssim_;
     int opacity_reset_interval_;
     float densify_grad_th_;
+    float densify_abs_grad_th_;
     int densify_interval_;
     int new_kf_times_of_use_;
     int stable_num_iter_existence_; ///< loop closure correction

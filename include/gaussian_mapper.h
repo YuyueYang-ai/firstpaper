@@ -89,6 +89,7 @@ struct VariableParameters
     float lambda_dssim;
     int opacity_reset_interval;
     float densify_grad_th;
+    float densify_abs_grad_th;
     int densify_interval;
     int new_kf_times_of_use;
     int stable_num_iter_existence; ///< loop closure correction
@@ -135,6 +136,7 @@ public:
     float lambdaDssim();
     int opacityResetInterval();
     float densifyGradThreshold();
+    float densifyAbsGradThreshold();
     int densifyInterval();
     int newKeyframeTimesOfUse();
     int stableNumIterExistence();
@@ -151,6 +153,7 @@ public:
     void setLambdaDssim(const float lambda_dssim);
     void setOpacityResetInterval(const int interval);
     void setDensifyGradThreshold(const float th);
+    void setDensifyAbsGradThreshold(const float th);
     void setDensifyInterval(const int interval);
     void setNewKeyframeTimesOfUse(const int times);
     void setStableNumIterExistence(const int niter);

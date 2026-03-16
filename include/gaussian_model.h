@@ -62,6 +62,7 @@
     this->sh_levels_ = torch::empty(0, torch::TensorOptions().device(device_type).dtype(torch::kInt32)); \
     this->max_radii2D_ = torch::empty(0, torch::TensorOptions().device(device_type));        \
     this->xyz_gradient_accum_ = torch::empty(0, torch::TensorOptions().device(device_type)); \
+    this->xyz_gradient_accum_abs_ = torch::empty(0, torch::TensorOptions().device(device_type)); \
     this->denom_ = torch::empty(0, torch::TensorOptions().device(device_type));              \
     GAUSSIAN_MODEL_TENSORS_TO_VEC
 
@@ -142,6 +143,7 @@ public:
 
     void densifyAndPrune(
         float max_grad,
+        float max_abs_grad,
         float min_opacity,
         float extent,
         int max_screen_size,
@@ -191,6 +193,7 @@ public:
     torch::Tensor sh_levels_;
     torch::Tensor max_radii2D_;
     torch::Tensor xyz_gradient_accum_;
+    torch::Tensor xyz_gradient_accum_abs_;
     torch::Tensor denom_;
     torch::Tensor exist_since_iter_;
 

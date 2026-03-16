@@ -1,0 +1,75 @@
+CUDA available! Training on GPU.
+[Gaussian Mapper]CUDA available! Training on GPU.
+[Gaussian Mapper]Reading parameters from "/media/yunxiangyang/Train/PanoCompactGS/omniGS/cfg/lonlat/office_32k_abs_0p001.yaml"
+                                                                             Loading camera 0, 1/1
+                                                                             Loading frame 136, 1/36                                                                             Loading frame 113, 2/36                                                                             Loading frame 126, 3/36                                                                             Loading frame 125, 4/36                                                                             Loading frame 124, 5/36                                                                             Loading frame 133, 6/36                                                                             Loading frame 123, 7/36                                                                             Loading frame 139, 8/36                                                                             Loading frame 110, 9/36                                                                             Loading frame 140, 10/36                                                                             Loading frame 111, 11/36                                                                             Loading frame 105, 12/36                                                                             Loading frame 134, 13/36                                                                             Loading frame 106, 14/36                                                                             Loading frame 135, 15/36                                                                             Loading frame 107, 16/36                                                                             Loading frame 108, 17/36                                                                             Loading frame 137, 18/36                                                                             Loading frame 109, 19/36                                                                             Loading frame 138, 20/36                                                                             Loading frame 112, 21/36                                                                             Loading frame 114, 22/36                                                                             Loading frame 115, 23/36                                                                             Loading frame 116, 24/36                                                                             Loading frame 117, 25/36                                                                             Loading frame 127, 26/36                                                                             Loading frame 118, 27/36                                                                             Loading frame 128, 28/36                                                                             Loading frame 119, 29/36                                                                             Loading frame 129, 30/36                                                                             Loading frame 120, 31/36                                                                             Loading frame 130, 32/36                                                                             Loading frame 121, 33/36                                                                             Loading frame 131, 34/36                                                                             Loading frame 122, 35/36                                                                             Loading frame 132, 36/36
+	[ply_header] Type: binary
+	[ply_header] element: vertex (251634)
+	[ply_header] 	property: x (type=float)
+	[ply_header] 	property: y (type=float)
+	[ply_header] 	property: z (type=float)
+	[ply_header] 	property: nx (type=float)
+	[ply_header] 	property: ny (type=float)
+	[ply_header] 	property: nz (type=float)
+	[ply_header] 	property: f_dc_0 (type=float)
+	[ply_header] 	property: f_dc_1 (type=float)
+	[ply_header] 	property: f_dc_2 (type=float)
+	[ply_header] 	property: f_rest_0 (type=float)
+	[ply_header] 	property: f_rest_1 (type=float)
+	[ply_header] 	property: f_rest_2 (type=float)
+	[ply_header] 	property: f_rest_3 (type=float)
+	[ply_header] 	property: f_rest_4 (type=float)
+	[ply_header] 	property: f_rest_5 (type=float)
+	[ply_header] 	property: f_rest_6 (type=float)
+	[ply_header] 	property: f_rest_7 (type=float)
+	[ply_header] 	property: f_rest_8 (type=float)
+	[ply_header] 	property: f_rest_9 (type=float)
+	[ply_header] 	property: f_rest_10 (type=float)
+	[ply_header] 	property: f_rest_11 (type=float)
+	[ply_header] 	property: f_rest_12 (type=float)
+	[ply_header] 	property: f_rest_13 (type=float)
+	[ply_header] 	property: f_rest_14 (type=float)
+	[ply_header] 	property: f_rest_15 (type=float)
+	[ply_header] 	property: f_rest_16 (type=float)
+	[ply_header] 	property: f_rest_17 (type=float)
+	[ply_header] 	property: f_rest_18 (type=float)
+	[ply_header] 	property: f_rest_19 (type=float)
+	[ply_header] 	property: f_rest_20 (type=float)
+	[ply_header] 	property: f_rest_21 (type=float)
+	[ply_header] 	property: f_rest_22 (type=float)
+	[ply_header] 	property: f_rest_23 (type=float)
+	[ply_header] 	property: f_rest_24 (type=float)
+	[ply_header] 	property: f_rest_25 (type=float)
+	[ply_header] 	property: f_rest_26 (type=float)
+	[ply_header] 	property: f_rest_27 (type=float)
+	[ply_header] 	property: f_rest_28 (type=float)
+	[ply_header] 	property: f_rest_29 (type=float)
+	[ply_header] 	property: f_rest_30 (type=float)
+	[ply_header] 	property: f_rest_31 (type=float)
+	[ply_header] 	property: f_rest_32 (type=float)
+	[ply_header] 	property: f_rest_33 (type=float)
+	[ply_header] 	property: f_rest_34 (type=float)
+	[ply_header] 	property: f_rest_35 (type=float)
+	[ply_header] 	property: f_rest_36 (type=float)
+	[ply_header] 	property: f_rest_37 (type=float)
+	[ply_header] 	property: f_rest_38 (type=float)
+	[ply_header] 	property: f_rest_39 (type=float)
+	[ply_header] 	property: f_rest_40 (type=float)
+	[ply_header] 	property: f_rest_41 (type=float)
+	[ply_header] 	property: f_rest_42 (type=float)
+	[ply_header] 	property: f_rest_43 (type=float)
+	[ply_header] 	property: f_rest_44 (type=float)
+	[ply_header] 	property: opacity (type=float)
+	[ply_header] 	property: scale_0 (type=float)
+	[ply_header] 	property: scale_1 (type=float)
+	[ply_header] 	property: scale_2 (type=float)
+	[ply_header] 	property: rot_0 (type=float)
+	[ply_header] 	property: rot_1 (type=float)
+	[ply_header] 	property: rot_2 (type=float)
+	[ply_header] 	property: rot_3 (type=float)
+	Read 251634 total xyz 
+	Read 251634 total f_dc 
+	Read 251634 total f_rest 
+	Read 251634 total opacity 
+	Read 251634 total scales 
+	Read 251634 total rot 
