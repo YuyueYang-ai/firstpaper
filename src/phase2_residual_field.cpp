@@ -33,7 +33,9 @@
 #include <torch/torch.h>
 
 #include "include/attribute_sort.h"
+#include "include/bitpack_utils.h"
 #include "include/gaussian_codec.h"
+#include "include/geometry_codec.h"
 #include "include/locality_codec.h"
 #include "include/sh_bandwidth.h"
 
@@ -137,6 +139,18 @@ Phase2ResidualFieldTrainOptions trainOptionsFromJson(const Json::Value& root)
     Phase2ResidualFieldTrainOptions options;
     if (root.isMember("num_fourier_frequencies"))
         options.num_fourier_frequencies = root["num_fourier_frequencies"].asInt();
+    if (root.isMember("use_hashgrid_encoder"))
+        options.use_hashgrid_encoder = root["use_hashgrid_encoder"].asBool();
+    if (root.isMember("hashgrid_num_levels"))
+        options.hashgrid_num_levels = root["hashgrid_num_levels"].asInt();
+    if (root.isMember("hashgrid_features_per_level"))
+        options.hashgrid_features_per_level = root["hashgrid_features_per_level"].asInt();
+    if (root.isMember("hashgrid_log2_hashmap_size"))
+        options.hashgrid_log2_hashmap_size = root["hashgrid_log2_hashmap_size"].asInt();
+    if (root.isMember("hashgrid_base_resolution"))
+        options.hashgrid_base_resolution = root["hashgrid_base_resolution"].asInt();
+    if (root.isMember("hashgrid_per_level_scale"))
+        options.hashgrid_per_level_scale = root["hashgrid_per_level_scale"].asFloat();
     if (root.isMember("hidden_dim"))
         options.hidden_dim = root["hidden_dim"].asInt();
     if (root.isMember("num_hidden_layers"))
@@ -161,6 +175,12 @@ Phase2ResidualFieldTrainOptions trainOptionsFromJson(const Json::Value& root)
         options.include_scaling = root["include_scaling"].asBool();
     if (root.isMember("include_rotation"))
         options.include_rotation = root["include_rotation"].asBool();
+    if (root.isMember("predict_opacity"))
+        options.predict_opacity = root["predict_opacity"].asBool();
+    if (root.isMember("predict_scaling"))
+        options.predict_scaling = root["predict_scaling"].asBool();
+    if (root.isMember("predict_rotation"))
+        options.predict_rotation = root["predict_rotation"].asBool();
     if (root.isMember("block_embedding_dim"))
         options.block_embedding_dim = root["block_embedding_dim"].asInt();
     if (root.isMember("save_decoded_compact"))
@@ -173,7 +193,206 @@ Phase2ResidualFieldTrainOptions trainOptionsFromJson(const Json::Value& root)
         options.decoded_attribute_quant_bits = root["decoded_attribute_quant_bits"].asInt();
     if (root.isMember("decoded_rotation_quant_bits"))
         options.decoded_rotation_quant_bits = root["decoded_rotation_quant_bits"].asInt();
+    if (root.isMember("phase2_compact_pack_sh_levels"))
+        options.phase2_compact_pack_sh_levels = root["phase2_compact_pack_sh_levels"].asBool();
+    if (root.isMember("phase2_compact_fdc_quant_bits"))
+        options.phase2_compact_fdc_quant_bits = root["phase2_compact_fdc_quant_bits"].asInt();
+    if (root.isMember("phase2_compact_use_geometry_codec"))
+        options.phase2_compact_use_geometry_codec = root["phase2_compact_use_geometry_codec"].asBool();
+    if (root.isMember("phase2_compact_geometry_quant_bits"))
+        options.phase2_compact_geometry_quant_bits = root["phase2_compact_geometry_quant_bits"].asInt();
     return options;
+}
+
+struct PredictionSlices
+{
+    torch::Tensor rest_residual;
+    torch::Tensor opacity_residual;
+    torch::Tensor scaling_residual;
+    torch::Tensor rotation_residual;
+};
+
+PredictionSlices splitPrediction(
+    const torch::Tensor& prediction,
+    int max_sh_degree,
+    const Phase2ResidualFieldTrainOptions& options)
+{
+    PredictionSlices slices;
+    const int rest_dim = (((max_sh_degree + 1) * (max_sh_degree + 1)) - 1) * 3;
+    int offset = 0;
+    slices.rest_residual = prediction.index({torch::indexing::Slice(), torch::indexing::Slice(offset, offset + rest_dim)});
+    offset += rest_dim;
+    if (options.predict_opacity) {
+        slices.opacity_residual = prediction.index({torch::indexing::Slice(), torch::indexing::Slice(offset, offset + 1)});
+        offset += 1;
+    }
+    if (options.predict_scaling) {
+        slices.scaling_residual = prediction.index({torch::indexing::Slice(), torch::indexing::Slice(offset, offset + 3)});
+        offset += 3;
+    }
+    if (options.predict_rotation) {
+        slices.rotation_residual = prediction.index({torch::indexing::Slice(), torch::indexing::Slice(offset, offset + 4)});
+        offset += 4;
+    }
+    return slices;
+}
+
+torch::Tensor flattenTensor(const torch::Tensor& tensor)
+{
+    if (!tensor.defined() || tensor.numel() == 0)
+        return tensor;
+    return tensor.view({tensor.size(0), -1});
+}
+
+torch::Tensor maybeNormalizeQuaternionRows(const torch::Tensor& rotation)
+{
+    if (!rotation.defined() || rotation.numel() == 0)
+        return rotation;
+    auto norm = torch::clamp_min(torch::norm(rotation, 2, 1, true), 1e-8f);
+    return rotation / norm;
+}
+
+torch::Tensor sanitizeTensorFinite(
+    const torch::Tensor& tensor,
+    float nan_value = 0.0f,
+    float posinf_value = 0.0f,
+    float neginf_value = 0.0f)
+{
+    return torch::nan_to_num(tensor.to(torch::kFloat32), nan_value, posinf_value, neginf_value);
+}
+
+torch::Tensor sanitizeOpacityLogits(const torch::Tensor& opacity)
+{
+    return torch::nan_to_num(opacity.to(torch::kFloat32), 0.0f, 20.0f, -20.0f);
+}
+
+torch::Tensor buildPerPointBase(
+    const torch::Tensor& target,
+    const torch::Tensor& block_ids,
+    int64_t num_blocks,
+    bool normalize_quaternion = false)
+{
+    auto block_means = locality_codec::computeBlockMeans(target, block_ids, num_blocks).to(torch::kFloat32);
+    if (normalize_quaternion)
+        block_means = maybeNormalizeQuaternionRows(flattenTensor(block_means)).view_as(block_means);
+    auto expanded = locality_codec::expandBlockMeans(block_means, block_ids).to(torch::kFloat32);
+    if (normalize_quaternion)
+        expanded = maybeNormalizeQuaternionRows(flattenTensor(expanded)).view_as(expanded);
+    return expanded;
+}
+
+torch::Tensor blockMeansFromPerPointBase(
+    const torch::Tensor& base_per_point,
+    const torch::Tensor& block_ids,
+    int64_t num_blocks,
+    bool normalize_quaternion = false)
+{
+    auto block_means = locality_codec::computeBlockMeans(base_per_point, block_ids, num_blocks).to(torch::kFloat32);
+    if (normalize_quaternion)
+        block_means = maybeNormalizeQuaternionRows(flattenTensor(block_means)).view_as(block_means);
+    return block_means;
+}
+
+void writeBinaryBytes(const std::filesystem::path& path, const std::vector<std::uint8_t>& bytes)
+{
+    std::ofstream out(path, std::ios::binary);
+    if (!out.is_open())
+        throw std::runtime_error("Cannot open binary output at " + path.string());
+    if (!bytes.empty())
+        out.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+}
+
+std::vector<std::uint8_t> readBinaryBytes(const std::filesystem::path& path)
+{
+    std::ifstream in(path, std::ios::binary | std::ios::ate);
+    if (!in.is_open())
+        throw std::runtime_error("Cannot open binary input at " + path.string());
+    const auto size = static_cast<std::size_t>(in.tellg());
+    in.seekg(0, std::ios::beg);
+    std::vector<std::uint8_t> bytes(size, 0u);
+    if (size > 0)
+        in.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(size));
+    return bytes;
+}
+
+void saveQuantizedTensorUint(
+    const std::filesystem::path& path,
+    const torch::Tensor& tensor,
+    int quant_bits,
+    Json::Value& meta)
+{
+    auto flat = tensor.detach().contiguous().to(torch::kCPU, torch::kFloat32).view({tensor.size(0), -1});
+    const int dims = flat.size(1);
+    const int bits = std::clamp(quant_bits, 1, 8);
+    const std::uint32_t qmax = (1u << bits) - 1u;
+    auto mins = std::get<0>(flat.min(0)).contiguous();
+    auto maxs = std::get<0>(flat.max(0)).contiguous();
+
+    Json::Value mins_json(Json::arrayValue);
+    Json::Value maxs_json(Json::arrayValue);
+    std::vector<std::uint32_t> packed_values(static_cast<std::size_t>(flat.numel()), 0u);
+
+    const float* flat_ptr = flat.data_ptr<float>();
+    const float* mins_ptr = mins.data_ptr<float>();
+    const float* maxs_ptr = maxs.data_ptr<float>();
+    for (int dim = 0; dim < dims; ++dim) {
+        mins_json.append(mins_ptr[dim]);
+        maxs_json.append(maxs_ptr[dim]);
+    }
+    for (int64_t row = 0; row < flat.size(0); ++row) {
+        for (int dim = 0; dim < dims; ++dim) {
+            const float min_v = mins_ptr[dim];
+            const float max_v = maxs_ptr[dim];
+            const float denom = std::max(max_v - min_v, 1e-8f);
+            const float normalized = std::clamp((flat_ptr[row * dims + dim] - min_v) / denom, 0.0f, 1.0f);
+            packed_values[static_cast<std::size_t>(row * dims + dim)] =
+                static_cast<std::uint32_t>(std::llround(static_cast<double>(normalized) * static_cast<double>(qmax)));
+        }
+    }
+
+    const auto packed_bytes = bitpack_utils::packUnsignedValues(packed_values, static_cast<std::uint8_t>(bits));
+    writeBinaryBytes(path, packed_bytes);
+
+    meta["storage"] = "packed_uint";
+    meta["bits"] = bits;
+    meta["shape"] = tensorShapeJson(tensor);
+    meta["mins"] = mins_json;
+    meta["maxs"] = maxs_json;
+}
+
+torch::Tensor loadQuantizedTensorUint(
+    const std::filesystem::path& path,
+    const Json::Value& meta,
+    torch::DeviceType device_type)
+{
+    const auto shape = tensorShapeFromJson(meta["shape"]);
+    const auto count = elementCount(shape);
+    const auto dims = shape.empty() ? 0 : static_cast<int>(count / static_cast<std::size_t>(shape[0]));
+    const auto bits = static_cast<std::uint8_t>(meta["bits"].asUInt());
+    const auto packed_bytes = readBinaryBytes(path);
+    const auto unpacked = bitpack_utils::unpackUnsignedValues(packed_bytes, count, bits);
+    const std::uint32_t qmax = (1u << bits) - 1u;
+
+    std::vector<float> mins(static_cast<std::size_t>(meta["mins"].size()), 0.0f);
+    std::vector<float> maxs(static_cast<std::size_t>(meta["maxs"].size()), 0.0f);
+    for (Json::ArrayIndex idx = 0; idx < meta["mins"].size(); ++idx) {
+        mins[static_cast<std::size_t>(idx)] = meta["mins"][idx].asFloat();
+        maxs[static_cast<std::size_t>(idx)] = meta["maxs"][idx].asFloat();
+    }
+
+    auto tensor = torch::empty(shape, torch::TensorOptions().dtype(torch::kFloat32).device(torch::kCPU));
+    auto flat = tensor.view({shape.empty() ? 0 : shape[0], dims});
+    float* flat_ptr = flat.data_ptr<float>();
+    for (int64_t row = 0; row < flat.size(0); ++row) {
+        for (int dim = 0; dim < dims; ++dim) {
+            const auto q = unpacked[static_cast<std::size_t>(row * dims + dim)];
+            const float min_v = mins[static_cast<std::size_t>(dim)];
+            const float max_v = maxs[static_cast<std::size_t>(dim)];
+            const float normalized = qmax > 0u ? (static_cast<float>(q) / static_cast<float>(qmax)) : 0.0f;
+            flat_ptr[row * dims + dim] = min_v + normalized * (max_v - min_v);
+        }
+    }
+    return tensor.to(device_type);
 }
 
 torch::Tensor reorderLeadingDimension(const torch::Tensor& tensor, const torch::Tensor& order)
@@ -210,6 +429,64 @@ torch::Tensor buildRestMask(const torch::Tensor& sh_levels, int max_sh_degree)
     return sh_bandwidth::applyLevelsToFeaturesRest(ones, sh_levels.to(torch::kInt32), max_sh_degree);
 }
 
+torch::Tensor phase2InputOpacity(
+    const phase2_residual_field::FrozenResidualFieldPackage& frozen,
+    const Phase2ResidualFieldTrainOptions& options)
+{
+    return (options.predict_opacity && frozen.opacity_base.defined())
+        ? frozen.opacity_base
+        : frozen.opacity;
+}
+
+torch::Tensor phase2InputScaling(
+    const phase2_residual_field::FrozenResidualFieldPackage& frozen,
+    const Phase2ResidualFieldTrainOptions& options)
+{
+    return (options.predict_scaling && frozen.scaling_base.defined())
+        ? frozen.scaling_base
+        : frozen.scaling;
+}
+
+torch::Tensor phase2InputRotation(
+    const phase2_residual_field::FrozenResidualFieldPackage& frozen,
+    const Phase2ResidualFieldTrainOptions& options)
+{
+    return (options.predict_rotation && frozen.rotation_base.defined())
+        ? frozen.rotation_base
+        : frozen.rotation;
+}
+
+torch::Tensor buildPredictionMask(
+    const phase2_residual_field::FrozenResidualFieldPackage& frozen,
+    const Phase2ResidualFieldTrainOptions& options)
+{
+    auto rest_mask = buildRestMask(frozen.sh_levels, frozen.max_sh_degree).view({frozen.xyz.size(0), -1});
+    std::vector<torch::Tensor> parts{rest_mask};
+    auto ones_options = torch::TensorOptions().dtype(torch::kFloat32).device(rest_mask.device());
+    if (options.predict_opacity)
+        parts.push_back(torch::ones({rest_mask.size(0), 1}, ones_options));
+    if (options.predict_scaling)
+        parts.push_back(torch::ones({rest_mask.size(0), 3}, ones_options));
+    if (options.predict_rotation)
+        parts.push_back(torch::ones({rest_mask.size(0), 4}, ones_options));
+    return torch::cat(parts, 1);
+}
+
+torch::Tensor buildTrainingTarget(
+    const phase2_residual_field::FrozenResidualFieldPackage& frozen,
+    const Phase2ResidualFieldTrainOptions& options)
+{
+    std::vector<torch::Tensor> parts;
+    parts.push_back((frozen.features_rest_target.to(torch::kFloat32) - frozen.features_rest_base.to(torch::kFloat32)).view({frozen.xyz.size(0), -1}));
+    if (options.predict_opacity)
+        parts.push_back((flattenTensor(frozen.opacity.to(torch::kFloat32)) - flattenTensor(frozen.opacity_base.to(torch::kFloat32))));
+    if (options.predict_scaling)
+        parts.push_back((flattenTensor(frozen.scaling.to(torch::kFloat32)) - flattenTensor(frozen.scaling_base.to(torch::kFloat32))));
+    if (options.predict_rotation)
+        parts.push_back((flattenTensor(frozen.rotation.to(torch::kFloat32)) - flattenTensor(frozen.rotation_base.to(torch::kFloat32))));
+    return torch::cat(parts, 1);
+}
+
 CompactExportOptions highPrecisionDecodedExportOptions(const Phase2ResidualFieldTrainOptions& options)
 {
     CompactExportOptions export_options;
@@ -242,8 +519,10 @@ CompactExportOptions localityBaseExportOptions(const phase2_residual_field::Froz
 
 DecodedGaussianTensors buildDecodedFromPrediction(
     const phase2_residual_field::FrozenResidualFieldPackage& frozen,
-    const torch::Tensor& predicted_features_rest_residual)
+    const torch::Tensor& predicted_flat,
+    const Phase2ResidualFieldTrainOptions& options)
 {
+    const auto slices = splitPrediction(predicted_flat, frozen.max_sh_degree, options);
     DecodedGaussianTensors decoded;
     decoded.max_sh_degree = frozen.max_sh_degree;
     decoded.active_sh_degree = frozen.active_sh_degree;
@@ -252,10 +531,32 @@ DecodedGaussianTensors buildDecodedFromPrediction(
     auto features_rest_base = frozen.features_rest_base.defined()
         ? frozen.features_rest_base
         : torch::zeros_like(frozen.features_rest_target);
-    decoded.features_rest = (features_rest_base + predicted_features_rest_residual).detach().to(torch::kFloat32);
-    decoded.opacity = frozen.opacity.detach().to(torch::kFloat32);
-    decoded.scaling = frozen.scaling.detach().to(torch::kFloat32);
-    decoded.rotation = frozen.rotation.detach().to(torch::kFloat32);
+    decoded.features_rest = (features_rest_base + slices.rest_residual.view_as(features_rest_base)).detach().to(torch::kFloat32);
+
+    if (options.predict_opacity && slices.opacity_residual.defined()) {
+        auto base = frozen.opacity_base.defined() ? frozen.opacity_base : torch::zeros_like(frozen.opacity);
+        decoded.opacity = (flattenTensor(base) + slices.opacity_residual).view_as(base).detach().to(torch::kFloat32);
+    }
+    else {
+        decoded.opacity = frozen.opacity.detach().to(torch::kFloat32);
+    }
+
+    if (options.predict_scaling && slices.scaling_residual.defined()) {
+        auto base = frozen.scaling_base.defined() ? frozen.scaling_base : torch::zeros_like(frozen.scaling);
+        decoded.scaling = (flattenTensor(base) + slices.scaling_residual).view_as(base).detach().to(torch::kFloat32);
+    }
+    else {
+        decoded.scaling = frozen.scaling.detach().to(torch::kFloat32);
+    }
+
+    if (options.predict_rotation && slices.rotation_residual.defined()) {
+        auto base = frozen.rotation_base.defined() ? frozen.rotation_base : torch::zeros_like(frozen.rotation);
+        auto rotation = (flattenTensor(base) + slices.rotation_residual).view_as(base).detach().to(torch::kFloat32);
+        decoded.rotation = maybeNormalizeQuaternionRows(rotation.view({rotation.size(0), -1})).view_as(rotation);
+    }
+    else {
+        decoded.rotation = frozen.rotation.detach().to(torch::kFloat32);
+    }
     decoded.sh_levels = frozen.sh_levels.detach().to(torch::kInt32);
     return decoded;
 }
@@ -263,7 +564,8 @@ DecodedGaussianTensors buildDecodedFromPrediction(
 torch::Tensor fullInference(
     phase2_residual_field::Phase2ResidualField& model,
     const phase2_residual_field::FrozenResidualFieldPackage& frozen,
-    const torch::Tensor& rest_mask,
+    const Phase2ResidualFieldTrainOptions& options,
+    const torch::Tensor& prediction_mask,
     int batch_size)
 {
     const auto num_points = frozen.xyz_normalized.size(0);
@@ -280,11 +582,11 @@ torch::Tensor fullInference(
             frozen.xyz_normalized.index({torch::indexing::Slice(start, end)}),
             frozen.sh_levels.index({torch::indexing::Slice(start, end)}),
             frozen.features_dc.index({torch::indexing::Slice(start, end)}),
-            frozen.opacity.index({torch::indexing::Slice(start, end)}),
-            frozen.scaling.index({torch::indexing::Slice(start, end)}),
-            frozen.rotation.index({torch::indexing::Slice(start, end)}),
+            phase2InputOpacity(frozen, options).index({torch::indexing::Slice(start, end)}),
+            phase2InputScaling(frozen, options).index({torch::indexing::Slice(start, end)}),
+            phase2InputRotation(frozen, options).index({torch::indexing::Slice(start, end)}),
             frozen.block_ids.index({torch::indexing::Slice(start, end)}));
-        batch_pred = batch_pred * rest_mask.index({torch::indexing::Slice(start, end)});
+        batch_pred = batch_pred * prediction_mask.index({torch::indexing::Slice(start, end)});
         predictions.index_put_({torch::indexing::Slice(start, end)}, batch_pred);
     }
     model->train();
@@ -303,16 +605,36 @@ Phase2ResidualFieldImpl::Phase2ResidualFieldImpl(
     : max_sh_degree_(max_sh_degree),
       num_blocks_(num_blocks),
       num_fourier_frequencies_(options.num_fourier_frequencies),
+      use_hashgrid_encoder_(options.use_hashgrid_encoder),
       include_features_dc_(options.include_features_dc),
       include_opacity_(options.include_opacity),
       include_scaling_(options.include_scaling),
       include_rotation_(options.include_rotation),
+      predict_opacity_(options.predict_opacity),
+      predict_scaling_(options.predict_scaling),
+      predict_rotation_(options.predict_rotation),
       block_embedding_dim_(std::max(0, options.block_embedding_dim))
 {
     const int rest_channels = (max_sh_degree_ + 1) * (max_sh_degree_ + 1) - 1;
-    output_dim_ = rest_channels * 3;
+    rest_output_dim_ = rest_channels * 3;
+    output_dim_ = rest_output_dim_
+        + (predict_opacity_ ? 1 : 0)
+        + (predict_scaling_ ? 3 : 0)
+        + (predict_rotation_ ? 4 : 0);
 
-    int input_dim = 3 + 6 * num_fourier_frequencies_ + (max_sh_degree_ + 1);
+    int input_dim = 3 + (max_sh_degree_ + 1);
+    if (num_fourier_frequencies_ > 0)
+        input_dim += 6 * num_fourier_frequencies_;
+    if (use_hashgrid_encoder_) {
+        HashGridEncoderOptions hashgrid_options;
+        hashgrid_options.num_levels = std::max(1, options.hashgrid_num_levels);
+        hashgrid_options.features_per_level = std::max(1, options.hashgrid_features_per_level);
+        hashgrid_options.log2_hashmap_size = std::max(8, options.hashgrid_log2_hashmap_size);
+        hashgrid_options.base_resolution = std::max(2, options.hashgrid_base_resolution);
+        hashgrid_options.per_level_scale = std::max(1.01f, options.hashgrid_per_level_scale);
+        hashgrid_encoder_ = register_module("hashgrid_encoder", HashGridEncoder(hashgrid_options));
+        input_dim += hashgrid_encoder_->outputDim();
+    }
     if (include_features_dc_)
         input_dim += 3;
     if (include_opacity_)
@@ -349,9 +671,12 @@ torch::Tensor Phase2ResidualFieldImpl::encode(
     const torch::Tensor& block_ids)
 {
     std::vector<torch::Tensor> features;
-    features.reserve(2 * num_fourier_frequencies_ + 8);
+    features.reserve(2 * std::max(0, num_fourier_frequencies_) + 10);
     auto xyz = xyz_normalized.to(torch::kFloat32);
     features.push_back(xyz);
+
+    if (hashgrid_encoder_)
+        features.push_back(hashgrid_encoder_->forward(xyz));
 
     for (int frequency_idx = 0; frequency_idx < num_fourier_frequencies_; ++frequency_idx) {
         const float frequency = std::pow(2.0f, static_cast<float>(frequency_idx)) * kPi;
@@ -412,10 +737,10 @@ void saveFrozenPackage(
     inverse_order.index_put_({order}, torch::arange(order.size(0), order.options()));
 
     const auto xyz_sorted = reorderLeadingDimension(decoded.xyz, order).to(torch::kFloat32);
-    const auto features_dc_sorted = reorderLeadingDimension(decoded.features_dc, order).to(torch::kFloat32);
-    const auto opacity_sorted = reorderLeadingDimension(decoded.opacity, order).to(torch::kFloat32);
-    const auto scaling_sorted = reorderLeadingDimension(decoded.scaling, order).to(torch::kFloat32);
-    const auto rotation_sorted = reorderLeadingDimension(decoded.rotation, order).to(torch::kFloat32);
+    const auto features_dc_sorted = sanitizeTensorFinite(reorderLeadingDimension(decoded.features_dc, order));
+    const auto opacity_sorted = sanitizeOpacityLogits(reorderLeadingDimension(decoded.opacity, order));
+    const auto scaling_sorted = sanitizeTensorFinite(reorderLeadingDimension(decoded.scaling, order));
+    const auto rotation_sorted = sanitizeTensorFinite(reorderLeadingDimension(decoded.rotation, order));
     const auto sh_levels_sorted = reorderLeadingDimension(decoded.sh_levels, order).to(torch::kInt32);
     const auto block_ids_sorted = locality_codec::computeRestBlockIds(
         sh_levels_sorted,
@@ -425,7 +750,7 @@ void saveFrozenPackage(
         ? (block_ids_sorted.max().item<int64_t>() + 1)
         : 0;
 
-    auto features_rest_target = reorderLeadingDimension(decoded.features_rest, order).to(torch::kFloat32);
+    auto features_rest_target = sanitizeTensorFinite(reorderLeadingDimension(decoded.features_rest, order));
     if (options.mask_features_rest_by_sh_level)
         features_rest_target = sh_bandwidth::applyLevelsToFeaturesRest(
             features_rest_target,
@@ -439,6 +764,21 @@ void saveFrozenPackage(
             decoded.max_sh_degree,
             localityBaseExportOptions(options)).to(torch::kFloat32);
     }
+    auto opacity_base = buildPerPointBase(
+        opacity_sorted.view({opacity_sorted.size(0), -1}),
+        block_ids_sorted,
+        num_blocks,
+        false).view_as(opacity_sorted);
+    auto scaling_base = buildPerPointBase(
+        scaling_sorted.view({scaling_sorted.size(0), -1}),
+        block_ids_sorted,
+        num_blocks,
+        false).view_as(scaling_sorted);
+    auto rotation_base = buildPerPointBase(
+        rotation_sorted.view({rotation_sorted.size(0), -1}),
+        block_ids_sorted,
+        num_blocks,
+        true).view_as(rotation_sorted);
 
     auto xyz_cpu = xyz_sorted.detach().contiguous().to(torch::kCPU);
     auto bbox_min = std::get<0>(xyz_cpu.min(0));
@@ -455,8 +795,11 @@ void saveFrozenPackage(
     writeTensorBinary<c10::Half>(result_dir / "features_dc.bin", features_dc_sorted.to(torch::kFloat16));
     writeTensorBinary<c10::Half>(result_dir / "features_rest_base.bin", features_rest_base.to(torch::kFloat16));
     writeTensorBinary<c10::Half>(result_dir / "features_rest_target.bin", features_rest_target.to(torch::kFloat16));
+    writeTensorBinary<c10::Half>(result_dir / "opacity_base.bin", opacity_base.to(torch::kFloat16));
     writeTensorBinary<c10::Half>(result_dir / "opacity.bin", opacity_sorted.to(torch::kFloat16));
+    writeTensorBinary<c10::Half>(result_dir / "scaling_base.bin", scaling_base.to(torch::kFloat16));
     writeTensorBinary<c10::Half>(result_dir / "scaling.bin", scaling_sorted.to(torch::kFloat16));
+    writeTensorBinary<c10::Half>(result_dir / "rotation_base.bin", rotation_base.to(torch::kFloat16));
     writeTensorBinary<c10::Half>(result_dir / "rotation.bin", rotation_sorted.to(torch::kFloat16));
     writeTensorBinary<int32_t>(result_dir / "sh_levels.bin", sh_levels_sorted.to(torch::kInt32));
     writeTensorBinary<int64_t>(result_dir / "morton_order.bin", order.to(torch::kLong));
@@ -481,8 +824,11 @@ void saveFrozenPackage(
     root["features_dc_shape"] = tensorShapeJson(features_dc_sorted);
     root["features_rest_base_shape"] = tensorShapeJson(features_rest_base);
     root["features_rest_target_shape"] = tensorShapeJson(features_rest_target);
+    root["opacity_base_shape"] = tensorShapeJson(opacity_base);
     root["opacity_shape"] = tensorShapeJson(opacity_sorted);
+    root["scaling_base_shape"] = tensorShapeJson(scaling_base);
     root["scaling_shape"] = tensorShapeJson(scaling_sorted);
+    root["rotation_base_shape"] = tensorShapeJson(rotation_base);
     root["rotation_shape"] = tensorShapeJson(rotation_sorted);
     root["sh_levels_shape"] = tensorShapeJson(sh_levels_sorted);
     root["block_ids_shape"] = Json::Value(Json::nullValue);
@@ -542,6 +888,7 @@ FrozenResidualFieldPackage loadFrozenPackage(
         tensorShapeFromJson(meta["features_dc_shape"]),
         torch::kFloat16,
         device_type).to(torch::kFloat32);
+    frozen.features_dc = sanitizeTensorFinite(frozen.features_dc);
     if (std::filesystem::exists(result_dir / "features_rest_base.bin")) {
         frozen.features_rest_base = readTensorBinary<c10::Half>(
             result_dir / "features_rest_base.bin",
@@ -554,23 +901,11 @@ FrozenResidualFieldPackage loadFrozenPackage(
         tensorShapeFromJson(meta["features_rest_target_shape"]),
         torch::kFloat16,
         device_type).to(torch::kFloat32);
+    frozen.features_rest_target = sanitizeTensorFinite(frozen.features_rest_target);
     if (!frozen.features_rest_base.defined())
         frozen.features_rest_base = torch::zeros_like(frozen.features_rest_target);
-    frozen.opacity = readTensorBinary<c10::Half>(
-        result_dir / "opacity.bin",
-        tensorShapeFromJson(meta["opacity_shape"]),
-        torch::kFloat16,
-        device_type).to(torch::kFloat32);
-    frozen.scaling = readTensorBinary<c10::Half>(
-        result_dir / "scaling.bin",
-        tensorShapeFromJson(meta["scaling_shape"]),
-        torch::kFloat16,
-        device_type).to(torch::kFloat32);
-    frozen.rotation = readTensorBinary<c10::Half>(
-        result_dir / "rotation.bin",
-        tensorShapeFromJson(meta["rotation_shape"]),
-        torch::kFloat16,
-        device_type).to(torch::kFloat32);
+    else
+        frozen.features_rest_base = sanitizeTensorFinite(frozen.features_rest_base);
     frozen.sh_levels = readTensorBinary<int32_t>(
         result_dir / "sh_levels.bin",
         tensorShapeFromJson(meta["sh_levels_shape"]),
@@ -582,6 +917,69 @@ FrozenResidualFieldPackage loadFrozenPackage(
         localityBaseExportOptions(frozen));
     if (frozen.num_blocks <= 0 && frozen.block_ids.defined() && frozen.block_ids.numel() > 0)
         frozen.num_blocks = frozen.block_ids.max().item<int64_t>() + 1;
+    if (std::filesystem::exists(result_dir / "opacity_base.bin")) {
+        frozen.opacity_base = readTensorBinary<c10::Half>(
+            result_dir / "opacity_base.bin",
+            tensorShapeFromJson(meta["opacity_base_shape"]),
+            torch::kFloat16,
+            device_type).to(torch::kFloat32);
+    }
+    frozen.opacity = readTensorBinary<c10::Half>(
+        result_dir / "opacity.bin",
+        tensorShapeFromJson(meta["opacity_shape"]),
+        torch::kFloat16,
+        device_type).to(torch::kFloat32);
+    frozen.opacity = sanitizeOpacityLogits(frozen.opacity);
+    if (!frozen.opacity_base.defined())
+        frozen.opacity_base = buildPerPointBase(
+            flattenTensor(frozen.opacity),
+            frozen.block_ids,
+            frozen.num_blocks,
+            false).view_as(frozen.opacity);
+    else
+        frozen.opacity_base = sanitizeOpacityLogits(frozen.opacity_base);
+    if (std::filesystem::exists(result_dir / "scaling_base.bin")) {
+        frozen.scaling_base = readTensorBinary<c10::Half>(
+            result_dir / "scaling_base.bin",
+            tensorShapeFromJson(meta["scaling_base_shape"]),
+            torch::kFloat16,
+            device_type).to(torch::kFloat32);
+    }
+    frozen.scaling = readTensorBinary<c10::Half>(
+        result_dir / "scaling.bin",
+        tensorShapeFromJson(meta["scaling_shape"]),
+        torch::kFloat16,
+        device_type).to(torch::kFloat32);
+    frozen.scaling = sanitizeTensorFinite(frozen.scaling);
+    if (!frozen.scaling_base.defined())
+        frozen.scaling_base = buildPerPointBase(
+            flattenTensor(frozen.scaling),
+            frozen.block_ids,
+            frozen.num_blocks,
+            false).view_as(frozen.scaling);
+    else
+        frozen.scaling_base = sanitizeTensorFinite(frozen.scaling_base);
+    if (std::filesystem::exists(result_dir / "rotation_base.bin")) {
+        frozen.rotation_base = readTensorBinary<c10::Half>(
+            result_dir / "rotation_base.bin",
+            tensorShapeFromJson(meta["rotation_base_shape"]),
+            torch::kFloat16,
+            device_type).to(torch::kFloat32);
+    }
+    frozen.rotation = readTensorBinary<c10::Half>(
+        result_dir / "rotation.bin",
+        tensorShapeFromJson(meta["rotation_shape"]),
+        torch::kFloat16,
+        device_type).to(torch::kFloat32);
+    frozen.rotation = sanitizeTensorFinite(frozen.rotation);
+    if (!frozen.rotation_base.defined())
+        frozen.rotation_base = buildPerPointBase(
+            flattenTensor(frozen.rotation),
+            frozen.block_ids,
+            frozen.num_blocks,
+            true).view_as(frozen.rotation);
+    else
+        frozen.rotation_base = maybeNormalizeQuaternionRows(flattenTensor(sanitizeTensorFinite(frozen.rotation_base))).view_as(frozen.rotation_base);
     frozen.morton_order = readTensorBinary<int64_t>(
         result_dir / "morton_order.bin",
         tensorShapeFromJson(meta["morton_order_shape"]),
@@ -606,20 +1004,91 @@ void savePhase2CompactPackage(
         throw std::runtime_error("Cannot find Phase 2 checkpoint at " + checkpoint_path.string());
 
     ensureDirectory(result_dir);
-    const auto block_bases = locality_codec::computeRestBlockBases(
+    const auto rest_block_bases = blockMeansFromPerPointBase(
         frozen.features_rest_base.to(torch::kFloat32),
-        frozen.sh_levels,
-        frozen.max_sh_degree,
-        localityBaseExportOptions(frozen)).to(torch::kFloat16);
+        frozen.block_ids,
+        frozen.num_blocks,
+        false).to(torch::kFloat16);
+    const auto opacity_block_bases = blockMeansFromPerPointBase(
+        frozen.opacity_base.to(torch::kFloat32),
+        frozen.block_ids,
+        frozen.num_blocks,
+        false).to(torch::kFloat16);
+    const auto scaling_block_bases = blockMeansFromPerPointBase(
+        frozen.scaling_base.to(torch::kFloat32),
+        frozen.block_ids,
+        frozen.num_blocks,
+        false).to(torch::kFloat16);
+    const auto rotation_block_bases = blockMeansFromPerPointBase(
+        frozen.rotation_base.to(torch::kFloat32),
+        frozen.block_ids,
+        frozen.num_blocks,
+        true).to(torch::kFloat16);
 
-    writeTensorBinary<c10::Half>(result_dir / "xyz.bin", frozen.xyz.to(torch::kFloat16));
-    writeTensorBinary<c10::Half>(result_dir / "xyz_normalized.bin", frozen.xyz_normalized.to(torch::kFloat16));
-    writeTensorBinary<c10::Half>(result_dir / "features_dc.bin", frozen.features_dc.to(torch::kFloat16));
-    writeTensorBinary<c10::Half>(result_dir / "opacity.bin", frozen.opacity.to(torch::kFloat16));
-    writeTensorBinary<c10::Half>(result_dir / "scaling.bin", frozen.scaling.to(torch::kFloat16));
-    writeTensorBinary<c10::Half>(result_dir / "rotation.bin", frozen.rotation.to(torch::kFloat16));
-    writeTensorBinary<int32_t>(result_dir / "sh_levels.bin", frozen.sh_levels.to(torch::kInt32));
-    writeTensorBinary<c10::Half>(result_dir / "features_rest_block_bases.bin", block_bases);
+    Json::Value xyz_meta;
+    if (options.phase2_compact_use_geometry_codec) {
+        geometry_codec::GeometryCodecOptions codec_options;
+        codec_options.quant_bits = options.phase2_compact_geometry_quant_bits;
+        geometry_codec::encodeMortonDelta(frozen.xyz, result_dir / "xyz.geom", xyz_meta, codec_options);
+    }
+    else {
+        writeTensorBinary<c10::Half>(result_dir / "xyz.bin", frozen.xyz.to(torch::kFloat16));
+        xyz_meta["storage"] = "fp16";
+        xyz_meta["shape"] = tensorShapeJson(frozen.xyz);
+        Json::Value bbox_min_json(Json::arrayValue);
+        Json::Value bbox_max_json(Json::arrayValue);
+        auto bbox_min = std::get<0>(frozen.xyz.detach().to(torch::kCPU, torch::kFloat32).min(0)).contiguous();
+        auto bbox_max = std::get<0>(frozen.xyz.detach().to(torch::kCPU, torch::kFloat32).max(0)).contiguous();
+        const float* bbox_min_ptr = bbox_min.data_ptr<float>();
+        const float* bbox_max_ptr = bbox_max.data_ptr<float>();
+        for (int axis = 0; axis < 3; ++axis) {
+            bbox_min_json.append(bbox_min_ptr[axis]);
+            bbox_max_json.append(bbox_max_ptr[axis]);
+        }
+        xyz_meta["bbox_min"] = bbox_min_json;
+        xyz_meta["bbox_max"] = bbox_max_json;
+    }
+
+    Json::Value fdc_meta;
+    saveQuantizedTensorUint(
+        result_dir / "features_dc.bin",
+        frozen.features_dc.to(torch::kFloat32),
+        options.phase2_compact_fdc_quant_bits,
+        fdc_meta);
+
+    Json::Value sh_levels_meta;
+    const auto max_level_value = static_cast<std::uint32_t>(std::max(0, frozen.max_sh_degree));
+    const auto sh_bits = options.phase2_compact_pack_sh_levels
+        ? bitpack_utils::minimumBitsForValue(max_level_value)
+        : 32u;
+    if (options.phase2_compact_pack_sh_levels) {
+        bitpack_utils::writePackedUnsignedTensor(
+            result_dir / "sh_levels.packed.bin",
+            frozen.sh_levels.to(torch::kInt32),
+            sh_bits);
+        sh_levels_meta["storage"] = "packed_uint";
+        sh_levels_meta["bits"] = sh_bits;
+    }
+    else {
+        writeTensorBinary<int32_t>(result_dir / "sh_levels.bin", frozen.sh_levels.to(torch::kInt32));
+        sh_levels_meta["storage"] = "int32";
+    }
+    sh_levels_meta["shape"] = tensorShapeJson(frozen.sh_levels);
+    sh_levels_meta["max_value"] = static_cast<int>(max_level_value);
+
+    writeTensorBinary<c10::Half>(result_dir / "features_rest_block_bases.bin", rest_block_bases);
+    if (options.predict_opacity)
+        writeTensorBinary<c10::Half>(result_dir / "opacity_block_bases.bin", opacity_block_bases);
+    else
+        writeTensorBinary<c10::Half>(result_dir / "opacity.bin", frozen.opacity.to(torch::kFloat16));
+    if (options.predict_scaling)
+        writeTensorBinary<c10::Half>(result_dir / "scaling_block_bases.bin", scaling_block_bases);
+    else
+        writeTensorBinary<c10::Half>(result_dir / "scaling.bin", frozen.scaling.to(torch::kFloat16));
+    if (options.predict_rotation)
+        writeTensorBinary<c10::Half>(result_dir / "rotation_block_bases.bin", rotation_block_bases);
+    else
+        writeTensorBinary<c10::Half>(result_dir / "rotation.bin", frozen.rotation.to(torch::kFloat16));
 
     std::filesystem::copy_file(
         checkpoint_path,
@@ -628,6 +1097,12 @@ void savePhase2CompactPackage(
 
     Json::Value phase2_field;
     phase2_field["num_fourier_frequencies"] = options.num_fourier_frequencies;
+    phase2_field["use_hashgrid_encoder"] = options.use_hashgrid_encoder;
+    phase2_field["hashgrid_num_levels"] = options.hashgrid_num_levels;
+    phase2_field["hashgrid_features_per_level"] = options.hashgrid_features_per_level;
+    phase2_field["hashgrid_log2_hashmap_size"] = options.hashgrid_log2_hashmap_size;
+    phase2_field["hashgrid_base_resolution"] = options.hashgrid_base_resolution;
+    phase2_field["hashgrid_per_level_scale"] = options.hashgrid_per_level_scale;
     phase2_field["hidden_dim"] = options.hidden_dim;
     phase2_field["num_hidden_layers"] = options.num_hidden_layers;
     phase2_field["batch_size"] = options.batch_size;
@@ -640,16 +1115,23 @@ void savePhase2CompactPackage(
     phase2_field["include_opacity"] = options.include_opacity;
     phase2_field["include_scaling"] = options.include_scaling;
     phase2_field["include_rotation"] = options.include_rotation;
+    phase2_field["predict_opacity"] = options.predict_opacity;
+    phase2_field["predict_scaling"] = options.predict_scaling;
+    phase2_field["predict_rotation"] = options.predict_rotation;
     phase2_field["block_embedding_dim"] = options.block_embedding_dim;
     phase2_field["save_decoded_compact"] = options.save_decoded_compact;
     phase2_field["save_phase2_compact"] = options.save_phase2_compact;
     phase2_field["decoded_xyz_quant_bits"] = options.decoded_xyz_quant_bits;
     phase2_field["decoded_attribute_quant_bits"] = options.decoded_attribute_quant_bits;
     phase2_field["decoded_rotation_quant_bits"] = options.decoded_rotation_quant_bits;
+    phase2_field["phase2_compact_pack_sh_levels"] = options.phase2_compact_pack_sh_levels;
+    phase2_field["phase2_compact_fdc_quant_bits"] = options.phase2_compact_fdc_quant_bits;
+    phase2_field["phase2_compact_use_geometry_codec"] = options.phase2_compact_use_geometry_codec;
+    phase2_field["phase2_compact_geometry_quant_bits"] = options.phase2_compact_geometry_quant_bits;
 
     Json::Value root;
     root["format"] = "phase2_residual_field_compact";
-    root["representation"] = "anchors_plus_field_weights";
+    root["representation"] = "light_anchors_plus_field_weights_v3";
     root["field_checkpoint"] = "field_weights.pt";
     root["scene_extent"] = frozen.scene_extent;
     root["num_points"] = Json::Value::Int64(frozen.xyz.size(0));
@@ -659,15 +1141,25 @@ void savePhase2CompactPackage(
     root["locality_high_sh_block_size"] = frozen.locality_high_sh_block_size;
     root["locality_low_sh_block_size"] = frozen.locality_low_sh_block_size;
     root["num_blocks"] = Json::Value::Int64(frozen.num_blocks);
-    root["xyz_shape"] = tensorShapeJson(frozen.xyz);
-    root["xyz_normalized_shape"] = tensorShapeJson(frozen.xyz_normalized);
-    root["features_dc_shape"] = tensorShapeJson(frozen.features_dc);
-    root["opacity_shape"] = tensorShapeJson(frozen.opacity);
-    root["scaling_shape"] = tensorShapeJson(frozen.scaling);
-    root["rotation_shape"] = tensorShapeJson(frozen.rotation);
-    root["sh_levels_shape"] = tensorShapeJson(frozen.sh_levels);
-    root["block_ids_shape"] = Json::Value(Json::nullValue);
-    root["features_rest_block_bases_shape"] = tensorShapeJson(block_bases);
+    root["xyz"] = xyz_meta;
+    root["features_dc"] = fdc_meta;
+    root["sh_levels"] = sh_levels_meta;
+    root["features_rest_block_bases_shape"] = tensorShapeJson(rest_block_bases);
+    root["opacity_storage"] = options.predict_opacity ? "field_predicted" : "fp16";
+    root["scaling_storage"] = options.predict_scaling ? "field_predicted" : "fp16";
+    root["rotation_storage"] = options.predict_rotation ? "field_predicted" : "fp16";
+    if (options.predict_opacity)
+        root["opacity_block_bases_shape"] = tensorShapeJson(opacity_block_bases);
+    else
+        root["opacity_shape"] = tensorShapeJson(frozen.opacity);
+    if (options.predict_scaling)
+        root["scaling_block_bases_shape"] = tensorShapeJson(scaling_block_bases);
+    else
+        root["scaling_shape"] = tensorShapeJson(frozen.scaling);
+    if (options.predict_rotation)
+        root["rotation_block_bases_shape"] = tensorShapeJson(rotation_block_bases);
+    else
+        root["rotation_shape"] = tensorShapeJson(frozen.rotation);
     root["phase2_field"] = phase2_field;
 
     writeMetadata(result_dir / "metadata.json", root);
@@ -683,6 +1175,88 @@ DecodedGaussianTensors loadPhase2Compact(
     if (meta.get("format", "").asString() != "phase2_residual_field_compact")
         throw std::runtime_error("Unsupported Phase 2 compact format at " + metadata_path.string());
 
+    if (meta.get("representation", "").asString() == "anchors_plus_field_weights") {
+        FrozenResidualFieldPackage frozen;
+        frozen.max_sh_degree = meta["max_sh_degree"].asInt();
+        frozen.active_sh_degree = meta["active_sh_degree"].asInt();
+        frozen.scene_extent = meta["scene_extent"].asFloat();
+        frozen.use_locality_base = meta.get("use_locality_base", true).asBool();
+        frozen.locality_high_sh_block_size = meta.get("locality_high_sh_block_size", 64).asInt();
+        frozen.locality_low_sh_block_size = meta.get("locality_low_sh_block_size", 128).asInt();
+        frozen.num_blocks = meta.get("num_blocks", 0).asInt64();
+
+        frozen.xyz = readTensorBinary<c10::Half>(
+            result_dir / "xyz.bin",
+            tensorShapeFromJson(meta["xyz_shape"]),
+            torch::kFloat16,
+            device_type).to(torch::kFloat32);
+        frozen.xyz_normalized = readTensorBinary<c10::Half>(
+            result_dir / "xyz_normalized.bin",
+            tensorShapeFromJson(meta["xyz_normalized_shape"]),
+            torch::kFloat16,
+            device_type).to(torch::kFloat32);
+        frozen.features_dc = readTensorBinary<c10::Half>(
+            result_dir / "features_dc.bin",
+            tensorShapeFromJson(meta["features_dc_shape"]),
+            torch::kFloat16,
+            device_type).to(torch::kFloat32);
+        frozen.opacity = readTensorBinary<c10::Half>(
+            result_dir / "opacity.bin",
+            tensorShapeFromJson(meta["opacity_shape"]),
+            torch::kFloat16,
+            device_type).to(torch::kFloat32);
+        frozen.scaling = readTensorBinary<c10::Half>(
+            result_dir / "scaling.bin",
+            tensorShapeFromJson(meta["scaling_shape"]),
+            torch::kFloat16,
+            device_type).to(torch::kFloat32);
+        frozen.rotation = readTensorBinary<c10::Half>(
+            result_dir / "rotation.bin",
+            tensorShapeFromJson(meta["rotation_shape"]),
+            torch::kFloat16,
+            device_type).to(torch::kFloat32);
+        frozen.sh_levels = readTensorBinary<int32_t>(
+            result_dir / "sh_levels.bin",
+            tensorShapeFromJson(meta["sh_levels_shape"]),
+            torch::kInt32,
+            device_type);
+        frozen.block_ids = locality_codec::computeRestBlockIds(
+            frozen.sh_levels,
+            frozen.max_sh_degree,
+            localityBaseExportOptions(frozen));
+        if (frozen.num_blocks <= 0 && frozen.block_ids.defined() && frozen.block_ids.numel() > 0)
+            frozen.num_blocks = frozen.block_ids.max().item<int64_t>() + 1;
+
+        auto block_bases = readTensorBinary<c10::Half>(
+            result_dir / "features_rest_block_bases.bin",
+            tensorShapeFromJson(meta["features_rest_block_bases_shape"]),
+            torch::kFloat16,
+            device_type).to(torch::kFloat32);
+        frozen.features_rest_base = locality_codec::expandRestBlockBases(
+            block_bases,
+            frozen.sh_levels,
+            frozen.max_sh_degree,
+            localityBaseExportOptions(frozen)).to(torch::kFloat32);
+        frozen.features_rest_target = torch::zeros_like(frozen.features_rest_base);
+        frozen.opacity = sanitizeOpacityLogits(frozen.opacity);
+        frozen.scaling = sanitizeTensorFinite(frozen.scaling);
+        frozen.rotation = sanitizeTensorFinite(frozen.rotation);
+        frozen.opacity_base = frozen.opacity;
+        frozen.scaling_base = frozen.scaling;
+        frozen.rotation_base = maybeNormalizeQuaternionRows(flattenTensor(frozen.rotation)).view_as(frozen.rotation);
+
+        auto train_options = trainOptionsFromJson(meta["phase2_field"]);
+        Phase2ResidualField model(frozen.max_sh_degree, frozen.num_blocks, train_options);
+        model->to(frozen.xyz_normalized.device());
+        torch::serialize::InputArchive archive;
+        archive.load_from((result_dir / meta.get("field_checkpoint", "field_weights.pt").asString()).string());
+        model->load(archive);
+
+        auto prediction_mask = buildPredictionMask(frozen, train_options);
+        auto predicted_flat = fullInference(model, frozen, train_options, prediction_mask, std::max(32768, train_options.batch_size));
+        return buildDecodedFromPrediction(frozen, predicted_flat, train_options);
+    }
+
     FrozenResidualFieldPackage frozen;
     frozen.max_sh_degree = meta["max_sh_degree"].asInt();
     frozen.active_sh_degree = meta["active_sh_degree"].asInt();
@@ -692,41 +1266,41 @@ DecodedGaussianTensors loadPhase2Compact(
     frozen.locality_low_sh_block_size = meta.get("locality_low_sh_block_size", 128).asInt();
     frozen.num_blocks = meta.get("num_blocks", 0).asInt64();
 
-    frozen.xyz = readTensorBinary<c10::Half>(
-        result_dir / "xyz.bin",
-        tensorShapeFromJson(meta["xyz_shape"]),
-        torch::kFloat16,
-        device_type).to(torch::kFloat32);
-    frozen.xyz_normalized = readTensorBinary<c10::Half>(
-        result_dir / "xyz_normalized.bin",
-        tensorShapeFromJson(meta["xyz_normalized_shape"]),
-        torch::kFloat16,
-        device_type).to(torch::kFloat32);
-    frozen.features_dc = readTensorBinary<c10::Half>(
+    const auto& xyz_meta = meta["xyz"];
+    const auto xyz_storage = xyz_meta.get("storage", xyz_meta.get("codec", "fp16").asString()).asString();
+    if (xyz_storage == "morton_delta_varint")
+        frozen.xyz = geometry_codec::decodeMortonDelta(result_dir / "xyz.geom", xyz_meta, device_type).to(torch::kFloat32);
+    else
+        frozen.xyz = readTensorBinary<c10::Half>(
+            result_dir / "xyz.bin",
+            tensorShapeFromJson(xyz_meta["shape"]),
+            torch::kFloat16,
+            device_type).to(torch::kFloat32);
+    frozen.xyz_normalized = normalizeFromBounds(frozen.xyz, xyz_meta["bbox_min"], xyz_meta["bbox_max"]);
+
+    frozen.features_dc = loadQuantizedTensorUint(
         result_dir / "features_dc.bin",
-        tensorShapeFromJson(meta["features_dc_shape"]),
-        torch::kFloat16,
+        meta["features_dc"],
         device_type).to(torch::kFloat32);
-    frozen.opacity = readTensorBinary<c10::Half>(
-        result_dir / "opacity.bin",
-        tensorShapeFromJson(meta["opacity_shape"]),
-        torch::kFloat16,
-        device_type).to(torch::kFloat32);
-    frozen.scaling = readTensorBinary<c10::Half>(
-        result_dir / "scaling.bin",
-        tensorShapeFromJson(meta["scaling_shape"]),
-        torch::kFloat16,
-        device_type).to(torch::kFloat32);
-    frozen.rotation = readTensorBinary<c10::Half>(
-        result_dir / "rotation.bin",
-        tensorShapeFromJson(meta["rotation_shape"]),
-        torch::kFloat16,
-        device_type).to(torch::kFloat32);
-    frozen.sh_levels = readTensorBinary<int32_t>(
-        result_dir / "sh_levels.bin",
-        tensorShapeFromJson(meta["sh_levels_shape"]),
-        torch::kInt32,
-        device_type);
+    frozen.features_dc = sanitizeTensorFinite(frozen.features_dc);
+
+    const auto& sh_meta = meta["sh_levels"];
+    const auto sh_shape = tensorShapeFromJson(sh_meta["shape"]);
+    const auto sh_count = elementCount(sh_shape);
+    if (sh_meta.get("storage", "").asString() == "packed_uint") {
+        frozen.sh_levels = bitpack_utils::readPackedUnsignedTensor(
+            result_dir / "sh_levels.packed.bin",
+            sh_count,
+            static_cast<std::uint8_t>(sh_meta["bits"].asUInt()),
+            device_type).view(sh_shape).to(torch::kInt32);
+    }
+    else {
+        frozen.sh_levels = readTensorBinary<int32_t>(
+            result_dir / "sh_levels.bin",
+            sh_shape,
+            torch::kInt32,
+            device_type);
+    }
     frozen.block_ids = locality_codec::computeRestBlockIds(
         frozen.sh_levels,
         frozen.max_sh_degree,
@@ -734,17 +1308,83 @@ DecodedGaussianTensors loadPhase2Compact(
     if (frozen.num_blocks <= 0 && frozen.block_ids.defined() && frozen.block_ids.numel() > 0)
         frozen.num_blocks = frozen.block_ids.max().item<int64_t>() + 1;
 
-    auto block_bases = readTensorBinary<c10::Half>(
+    auto rest_block_bases = readTensorBinary<c10::Half>(
         result_dir / "features_rest_block_bases.bin",
         tensorShapeFromJson(meta["features_rest_block_bases_shape"]),
         torch::kFloat16,
         device_type).to(torch::kFloat32);
     frozen.features_rest_base = locality_codec::expandRestBlockBases(
-        block_bases,
+        rest_block_bases,
         frozen.sh_levels,
         frozen.max_sh_degree,
         localityBaseExportOptions(frozen)).to(torch::kFloat32);
     frozen.features_rest_target = torch::zeros_like(frozen.features_rest_base);
+    frozen.opacity_base = torch::zeros({frozen.xyz.size(0), 1}, torch::TensorOptions().dtype(torch::kFloat32).device(frozen.xyz.device()));
+    frozen.scaling_base = torch::zeros({frozen.xyz.size(0), 3}, torch::TensorOptions().dtype(torch::kFloat32).device(frozen.xyz.device()));
+    frozen.rotation_base = torch::zeros({frozen.xyz.size(0), 4}, torch::TensorOptions().dtype(torch::kFloat32).device(frozen.xyz.device()));
+
+    const auto opacity_storage = meta.get("opacity_storage", "field_predicted").asString();
+    if (opacity_storage == "field_predicted") {
+        auto opacity_block_bases = readTensorBinary<c10::Half>(
+            result_dir / "opacity_block_bases.bin",
+            tensorShapeFromJson(meta["opacity_block_bases_shape"]),
+            torch::kFloat16,
+            device_type).to(torch::kFloat32);
+        frozen.opacity_base = locality_codec::expandBlockMeans(opacity_block_bases, frozen.block_ids).to(torch::kFloat32);
+        frozen.opacity_base = sanitizeOpacityLogits(frozen.opacity_base);
+        frozen.opacity = frozen.opacity_base.clone();
+    }
+    else {
+        frozen.opacity = readTensorBinary<c10::Half>(
+            result_dir / "opacity.bin",
+            tensorShapeFromJson(meta["opacity_shape"]),
+            torch::kFloat16,
+            device_type).to(torch::kFloat32);
+        frozen.opacity = sanitizeOpacityLogits(frozen.opacity);
+        frozen.opacity_base = frozen.opacity.clone();
+    }
+
+    const auto scaling_storage = meta.get("scaling_storage", "field_predicted").asString();
+    if (scaling_storage == "field_predicted") {
+        auto scaling_block_bases = readTensorBinary<c10::Half>(
+            result_dir / "scaling_block_bases.bin",
+            tensorShapeFromJson(meta["scaling_block_bases_shape"]),
+            torch::kFloat16,
+            device_type).to(torch::kFloat32);
+        frozen.scaling_base = locality_codec::expandBlockMeans(scaling_block_bases, frozen.block_ids).to(torch::kFloat32);
+        frozen.scaling_base = sanitizeTensorFinite(frozen.scaling_base);
+        frozen.scaling = frozen.scaling_base.clone();
+    }
+    else {
+        frozen.scaling = readTensorBinary<c10::Half>(
+            result_dir / "scaling.bin",
+            tensorShapeFromJson(meta["scaling_shape"]),
+            torch::kFloat16,
+            device_type).to(torch::kFloat32);
+        frozen.scaling = sanitizeTensorFinite(frozen.scaling);
+        frozen.scaling_base = frozen.scaling.clone();
+    }
+
+    const auto rotation_storage = meta.get("rotation_storage", "field_predicted").asString();
+    if (rotation_storage == "field_predicted") {
+        auto rotation_block_bases = readTensorBinary<c10::Half>(
+            result_dir / "rotation_block_bases.bin",
+            tensorShapeFromJson(meta["rotation_block_bases_shape"]),
+            torch::kFloat16,
+            device_type).to(torch::kFloat32);
+        frozen.rotation_base = locality_codec::expandBlockMeans(rotation_block_bases, frozen.block_ids).to(torch::kFloat32);
+        frozen.rotation_base = maybeNormalizeQuaternionRows(flattenTensor(frozen.rotation_base)).view_as(frozen.rotation_base);
+        frozen.rotation = frozen.rotation_base.clone();
+    }
+    else {
+        frozen.rotation = readTensorBinary<c10::Half>(
+            result_dir / "rotation.bin",
+            tensorShapeFromJson(meta["rotation_shape"]),
+            torch::kFloat16,
+            device_type).to(torch::kFloat32);
+        frozen.rotation = sanitizeTensorFinite(frozen.rotation);
+        frozen.rotation_base = maybeNormalizeQuaternionRows(flattenTensor(frozen.rotation)).view_as(frozen.rotation);
+    }
 
     auto train_options = trainOptionsFromJson(meta["phase2_field"]);
     Phase2ResidualField model(frozen.max_sh_degree, frozen.num_blocks, train_options);
@@ -753,10 +1393,9 @@ DecodedGaussianTensors loadPhase2Compact(
     archive.load_from((result_dir / meta.get("field_checkpoint", "field_weights.pt").asString()).string());
     model->load(archive);
 
-    auto rest_mask = buildRestMask(frozen.sh_levels, frozen.max_sh_degree).view({frozen.xyz.size(0), -1});
-    auto predicted_flat = fullInference(model, frozen, rest_mask, std::max(32768, train_options.batch_size));
-    auto predicted_features_rest_residual = predicted_flat.view_as(frozen.features_rest_base);
-    return buildDecodedFromPrediction(frozen, predicted_features_rest_residual);
+    auto prediction_mask = buildPredictionMask(frozen, train_options);
+    auto predicted_flat = fullInference(model, frozen, train_options, prediction_mask, std::max(32768, train_options.batch_size));
+    return buildDecodedFromPrediction(frozen, predicted_flat, train_options);
 }
 
 Phase2ResidualFieldTrainResult trainResidualField(
@@ -774,11 +1413,12 @@ Phase2ResidualFieldTrainResult trainResidualField(
 
     auto xyz_normalized = frozen.xyz_normalized.to(torch::kFloat32);
     auto features_dc = frozen.features_dc.to(torch::kFloat32);
-    auto opacity = frozen.opacity.to(torch::kFloat32);
+    auto opacity_input = phase2InputOpacity(frozen, options).to(torch::kFloat32);
+    auto scaling_input = phase2InputScaling(frozen, options).to(torch::kFloat32);
+    auto rotation_input = phase2InputRotation(frozen, options).to(torch::kFloat32);
     auto sh_levels = frozen.sh_levels.to(torch::kInt32);
-    auto features_rest_base = frozen.features_rest_base.to(torch::kFloat32);
-    auto target = (frozen.features_rest_target.to(torch::kFloat32) - features_rest_base).view({frozen.xyz.size(0), -1});
-    auto rest_mask = buildRestMask(sh_levels, frozen.max_sh_degree).view({frozen.xyz.size(0), -1});
+    auto target = buildTrainingTarget(frozen, options).to(torch::kFloat32);
+    auto prediction_mask = buildPredictionMask(frozen, options).to(torch::kFloat32);
 
     torch::optim::Adam optimizer(
         model->parameters(),
@@ -799,11 +1439,11 @@ Phase2ResidualFieldTrainResult trainResidualField(
             xyz_normalized.index_select(0, batch_index),
             sh_levels.index_select(0, batch_index),
             features_dc.index_select(0, batch_index),
-            opacity.index_select(0, batch_index),
-            frozen.scaling.index_select(0, batch_index),
-            frozen.rotation.index_select(0, batch_index),
+            opacity_input.index_select(0, batch_index),
+            scaling_input.index_select(0, batch_index),
+            rotation_input.index_select(0, batch_index),
             frozen.block_ids.index_select(0, batch_index));
-        prediction = prediction * rest_mask.index_select(0, batch_index);
+        prediction = prediction * prediction_mask.index_select(0, batch_index);
         auto batch_target = target.index_select(0, batch_index);
         auto loss = torch::mse_loss(prediction, batch_target);
 
@@ -816,7 +1456,7 @@ Phase2ResidualFieldTrainResult trainResidualField(
                       << " train_mse=" << loss.item<float>() << std::endl;
 
         if (options.eval_interval > 0 && (step % options.eval_interval == 0 || step == options.max_steps)) {
-            auto full_prediction = fullInference(model, frozen, rest_mask, std::max(32768, batch_size));
+            auto full_prediction = fullInference(model, frozen, options, prediction_mask, std::max(32768, batch_size));
             auto eval_loss = torch::mse_loss(full_prediction, target).item<float>();
             final_eval_loss = eval_loss;
             std::cout << "[Phase2ResidualField] step=" << step
@@ -834,9 +1474,10 @@ Phase2ResidualFieldTrainResult trainResidualField(
     model->save(last_archive);
     last_archive.save_to((result_dir / "checkpoints/model_last.pt").string());
 
-    auto predicted_flat = fullInference(model, frozen, rest_mask, std::max(32768, batch_size));
-    auto predicted_features_rest_residual = predicted_flat.view_as(frozen.features_rest_target);
-    auto decoded = buildDecodedFromPrediction(frozen, predicted_features_rest_residual);
+    auto predicted_flat = fullInference(model, frozen, options, prediction_mask, std::max(32768, batch_size));
+    auto decoded = buildDecodedFromPrediction(frozen, predicted_flat, options);
+    auto prediction_slices = splitPrediction(predicted_flat, frozen.max_sh_degree, options);
+    auto predicted_features_rest_residual = prediction_slices.rest_residual.view_as(frozen.features_rest_target);
 
     writeTensorBinary<c10::Half>(
         result_dir / "predictions/features_rest_residual_pred.bin",
@@ -851,6 +1492,9 @@ Phase2ResidualFieldTrainResult trainResidualField(
     summary["max_sh_degree"] = frozen.max_sh_degree;
     summary["active_sh_degree"] = frozen.active_sh_degree;
     summary["num_fourier_frequencies"] = options.num_fourier_frequencies;
+    summary["use_hashgrid_encoder"] = options.use_hashgrid_encoder;
+    summary["hashgrid_num_levels"] = options.hashgrid_num_levels;
+    summary["hashgrid_features_per_level"] = options.hashgrid_features_per_level;
     summary["hidden_dim"] = options.hidden_dim;
     summary["num_hidden_layers"] = options.num_hidden_layers;
     summary["batch_size"] = batch_size;
@@ -861,6 +1505,9 @@ Phase2ResidualFieldTrainResult trainResidualField(
     summary["include_opacity"] = options.include_opacity;
     summary["include_scaling"] = options.include_scaling;
     summary["include_rotation"] = options.include_rotation;
+    summary["predict_opacity"] = options.predict_opacity;
+    summary["predict_scaling"] = options.predict_scaling;
+    summary["predict_rotation"] = options.predict_rotation;
     summary["block_embedding_dim"] = options.block_embedding_dim;
     summary["use_locality_base"] = frozen.features_rest_base.abs().sum().item<float>() > 0.0f;
     summary["target_type"] = frozen.features_rest_base.abs().sum().item<float>() > 0.0f ? "locality_residual" : "full_features_rest";
@@ -872,6 +1519,12 @@ Phase2ResidualFieldTrainResult trainResidualField(
     summary["num_blocks"] = Json::Value::Int64(frozen.num_blocks);
     summary["predicted_features_rest_residual_shape"] = tensorShapeJson(predicted_features_rest_residual);
     summary["predicted_features_rest_shape"] = tensorShapeJson(decoded.features_rest);
+    if (prediction_slices.opacity_residual.defined())
+        summary["predicted_opacity_residual_shape"] = tensorShapeJson(prediction_slices.opacity_residual);
+    if (prediction_slices.scaling_residual.defined())
+        summary["predicted_scaling_residual_shape"] = tensorShapeJson(prediction_slices.scaling_residual);
+    if (prediction_slices.rotation_residual.defined())
+        summary["predicted_rotation_residual_shape"] = tensorShapeJson(prediction_slices.rotation_residual);
     writeMetadata(result_dir / "training_summary.json", summary);
 
     if (options.save_decoded_compact) {
