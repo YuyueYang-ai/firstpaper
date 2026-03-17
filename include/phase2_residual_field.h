@@ -26,6 +26,7 @@
 #include <torch/torch.h>
 
 #include "compact_gaussian.h"
+#include "hashgrid_field.h"
 
 namespace phase2_residual_field
 {
@@ -44,8 +45,11 @@ struct FrozenResidualFieldPackage
     torch::Tensor features_dc;
     torch::Tensor features_rest_base;
     torch::Tensor features_rest_target;
+    torch::Tensor opacity_base;
     torch::Tensor opacity;
+    torch::Tensor scaling_base;
     torch::Tensor scaling;
+    torch::Tensor rotation_base;
     torch::Tensor rotation;
     torch::Tensor sh_levels;
     torch::Tensor block_ids;
@@ -80,6 +84,10 @@ public:
         const torch::Tensor& block_ids);
 
     int outputDim() const { return output_dim_; }
+    int restOutputDim() const { return rest_output_dim_; }
+    bool predictsOpacity() const { return predict_opacity_; }
+    bool predictsScaling() const { return predict_scaling_; }
+    bool predictsRotation() const { return predict_rotation_; }
 
 private:
     torch::Tensor encode(
@@ -95,13 +103,19 @@ private:
     int max_sh_degree_ = 0;
     int64_t num_blocks_ = 0;
     int num_fourier_frequencies_ = 0;
+    bool use_hashgrid_encoder_ = false;
     int output_dim_ = 0;
+    int rest_output_dim_ = 0;
     bool include_features_dc_ = true;
     bool include_opacity_ = true;
     bool include_scaling_ = true;
     bool include_rotation_ = true;
+    bool predict_opacity_ = true;
+    bool predict_scaling_ = true;
+    bool predict_rotation_ = true;
     int block_embedding_dim_ = 0;
     torch::nn::Embedding block_embedding_{nullptr};
+    HashGridEncoder hashgrid_encoder_{nullptr};
     torch::nn::Sequential network_{nullptr};
 };
 

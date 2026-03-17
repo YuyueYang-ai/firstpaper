@@ -62,6 +62,20 @@ torch::Tensor computeRestBlockBase(
     int max_sh_degree,
     const CompactExportOptions& options);
 
+torch::Tensor computeBlockMeans(
+    const torch::Tensor& values,
+    const torch::Tensor& block_ids,
+    int64_t num_blocks);
+
+torch::Tensor expandBlockMeans(
+    const torch::Tensor& block_means,
+    const torch::Tensor& block_ids);
+
+torch::Tensor computeExpandedBlockMeans(
+    const torch::Tensor& values,
+    const torch::Tensor& block_ids,
+    int64_t num_blocks);
+
 torch::Tensor computeRestBlockBases(
     const torch::Tensor& features_rest,
     const torch::Tensor& sh_levels,

@@ -419,6 +419,105 @@ torch::Tensor computeRestBlockBase(
     return expandRestBlockBases(block_bases, sh_levels, max_sh_degree, options);
 }
 
+torch::Tensor computeBlockMeans(
+    const torch::Tensor& values,
+    const torch::Tensor& block_ids,
+    int64_t num_blocks)
+{
+    if (!values.defined() || values.numel() == 0)
+        return torch::zeros({0}, values.options());
+    if (!block_ids.defined() || block_ids.numel() == 0 || num_blocks <= 0)
+        throw std::runtime_error("computeBlockMeans expects non-empty block ids and positive block count.");
+    if (values.size(0) != block_ids.size(0))
+        throw std::runtime_error("computeBlockMeans: values and block_ids length mismatch.");
+
+    auto values_cpu = values.detach().contiguous().to(torch::kCPU, torch::kFloat32);
+    auto block_ids_cpu = block_ids.detach().contiguous().to(torch::kCPU, torch::kLong);
+    const auto trailing_shape = values_cpu.sizes().vec();
+    const int64_t flattened_dims = values_cpu.numel() / std::max<int64_t>(1, values_cpu.size(0));
+    auto values_flat = values_cpu.view({values_cpu.size(0), flattened_dims});
+
+    auto block_means = torch::zeros(
+        {num_blocks, flattened_dims},
+        torch::TensorOptions().dtype(torch::kFloat32).device(torch::kCPU));
+    auto counts = torch::zeros(
+        {num_blocks},
+        torch::TensorOptions().dtype(torch::kFloat32).device(torch::kCPU));
+
+    const float* values_ptr = values_flat.data_ptr<float>();
+    const int64_t* block_ids_ptr = block_ids_cpu.data_ptr<int64_t>();
+    float* means_ptr = block_means.data_ptr<float>();
+    float* counts_ptr = counts.data_ptr<float>();
+
+    for (int64_t point_idx = 0; point_idx < values_flat.size(0); ++point_idx) {
+        const int64_t block_idx = block_ids_ptr[point_idx];
+        if (block_idx < 0 || block_idx >= num_blocks)
+            throw std::runtime_error("computeBlockMeans: block id out of range.");
+        counts_ptr[block_idx] += 1.0f;
+        for (int64_t dim = 0; dim < flattened_dims; ++dim)
+            means_ptr[block_idx * flattened_dims + dim] += values_ptr[point_idx * flattened_dims + dim];
+    }
+
+    for (int64_t block_idx = 0; block_idx < num_blocks; ++block_idx) {
+        const float count = std::max(1.0f, counts_ptr[block_idx]);
+        for (int64_t dim = 0; dim < flattened_dims; ++dim)
+            means_ptr[block_idx * flattened_dims + dim] /= count;
+    }
+
+    std::vector<int64_t> output_shape;
+    output_shape.reserve(static_cast<std::size_t>(values_cpu.dim()));
+    output_shape.push_back(num_blocks);
+    for (int dim_idx = 1; dim_idx < values_cpu.dim(); ++dim_idx)
+        output_shape.push_back(values_cpu.size(dim_idx));
+    return block_means.view(output_shape).to(values.device());
+}
+
+torch::Tensor expandBlockMeans(
+    const torch::Tensor& block_means,
+    const torch::Tensor& block_ids)
+{
+    if (!block_means.defined() || block_means.numel() == 0)
+        throw std::runtime_error("expandBlockMeans expects non-empty block means.");
+    if (!block_ids.defined() || block_ids.numel() == 0)
+        return torch::zeros({0}, block_means.options());
+
+    auto block_means_cpu = block_means.detach().contiguous().to(torch::kCPU, torch::kFloat32);
+    auto block_ids_cpu = block_ids.detach().contiguous().to(torch::kCPU, torch::kLong);
+
+    const int64_t flattened_dims = block_means_cpu.numel() / std::max<int64_t>(1, block_means_cpu.size(0));
+    auto block_means_flat = block_means_cpu.view({block_means_cpu.size(0), flattened_dims});
+    auto expanded = torch::zeros(
+        {block_ids_cpu.size(0), flattened_dims},
+        torch::TensorOptions().dtype(torch::kFloat32).device(torch::kCPU));
+
+    const float* means_ptr = block_means_flat.data_ptr<float>();
+    const int64_t* block_ids_ptr = block_ids_cpu.data_ptr<int64_t>();
+    float* expanded_ptr = expanded.data_ptr<float>();
+
+    for (int64_t point_idx = 0; point_idx < block_ids_cpu.size(0); ++point_idx) {
+        const int64_t block_idx = block_ids_ptr[point_idx];
+        if (block_idx < 0 || block_idx >= block_means_flat.size(0))
+            throw std::runtime_error("expandBlockMeans: block id out of range.");
+        for (int64_t dim = 0; dim < flattened_dims; ++dim)
+            expanded_ptr[point_idx * flattened_dims + dim] = means_ptr[block_idx * flattened_dims + dim];
+    }
+
+    std::vector<int64_t> output_shape;
+    output_shape.reserve(static_cast<std::size_t>(block_means_cpu.dim()));
+    output_shape.push_back(block_ids_cpu.size(0));
+    for (int dim_idx = 1; dim_idx < block_means_cpu.dim(); ++dim_idx)
+        output_shape.push_back(block_means_cpu.size(dim_idx));
+    return expanded.view(output_shape).to(block_means.device());
+}
+
+torch::Tensor computeExpandedBlockMeans(
+    const torch::Tensor& values,
+    const torch::Tensor& block_ids,
+    int64_t num_blocks)
+{
+    return expandBlockMeans(computeBlockMeans(values, block_ids, num_blocks), block_ids);
+}
+
 std::vector<float> decodeRestPayload(
     const EncodedRestPayload& encoded,
     const torch::Tensor& sh_levels,

@@ -117,6 +117,9 @@ add_library(gaussian_mapper SHARED
     include/pruning_policy.h
     include/sh_bandwidth.h
     include/attribute_sort.h
+    include/bitpack_utils.h
+    include/geometry_codec.h
+    include/hashgrid_field.h
     include/locality_codec.h
     include/phase2_residual_field.h
     include/gaussian_codec.h
@@ -139,7 +142,10 @@ add_library(gaussian_mapper SHARED
     include/types.h
     src/gaussian_keyframe.cpp
     src/attribute_sort.cpp
+    src/bitpack_utils.cpp
+    src/geometry_codec.cpp
     src/locality_codec.cpp
+    src/hashgrid_field.cpp
     src/phase2_residual_field.cpp
     src/gaussian_codec.cpp
     src/gaussian_model.cpp

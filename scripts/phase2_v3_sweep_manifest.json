@@ -1,0 +1,130 @@
+[
+  {
+    "name": "e01_ref_h128_l3_b16_lr1e3_hash8",
+    "scene": "office",
+    "notes": "Phase2-v3 reference with moderate width and default lr",
+    "overrides": {
+      "Phase2Field.hidden_dim": 128,
+      "Phase2Field.num_hidden_layers": 3,
+      "Phase2Field.block_embedding_dim": 16,
+      "Phase2Field.learning_rate": 0.001,
+      "Phase2Field.hashgrid_num_levels": 8,
+      "Phase2Field.hashgrid_features_per_level": 2,
+      "Phase2Field.hashgrid_log2_hashmap_size": 18,
+      "Phase2Field.hashgrid_base_resolution": 16,
+      "Phase2Field.hashgrid_per_level_scale": 1.5
+    }
+  },
+  {
+    "name": "e02_ref_h128_l3_b16_lr5e4_hash8",
+    "scene": "office",
+    "notes": "Reference width with lower lr",
+    "overrides": {
+      "Phase2Field.hidden_dim": 128,
+      "Phase2Field.num_hidden_layers": 3,
+      "Phase2Field.block_embedding_dim": 16,
+      "Phase2Field.learning_rate": 0.0005,
+      "Phase2Field.hashgrid_num_levels": 8,
+      "Phase2Field.hashgrid_features_per_level": 2,
+      "Phase2Field.hashgrid_log2_hashmap_size": 18,
+      "Phase2Field.hashgrid_base_resolution": 16,
+      "Phase2Field.hashgrid_per_level_scale": 1.5
+    }
+  },
+  {
+    "name": "e03_h192_l3_b16_lr1e3_hash8",
+    "scene": "office",
+    "notes": "Wider MLP without larger block embedding",
+    "overrides": {
+      "Phase2Field.hidden_dim": 192,
+      "Phase2Field.num_hidden_layers": 3,
+      "Phase2Field.block_embedding_dim": 16,
+      "Phase2Field.learning_rate": 0.001,
+      "Phase2Field.hashgrid_num_levels": 8,
+      "Phase2Field.hashgrid_features_per_level": 2,
+      "Phase2Field.hashgrid_log2_hashmap_size": 18,
+      "Phase2Field.hashgrid_base_resolution": 16,
+      "Phase2Field.hashgrid_per_level_scale": 1.5
+    }
+  },
+  {
+    "name": "e04_h192_l3_b16_lr5e4_hash8",
+    "scene": "office",
+    "notes": "Wider MLP with lower lr",
+    "overrides": {
+      "Phase2Field.hidden_dim": 192,
+      "Phase2Field.num_hidden_layers": 3,
+      "Phase2Field.block_embedding_dim": 16,
+      "Phase2Field.learning_rate": 0.0005,
+      "Phase2Field.hashgrid_num_levels": 8,
+      "Phase2Field.hashgrid_features_per_level": 2,
+      "Phase2Field.hashgrid_log2_hashmap_size": 18,
+      "Phase2Field.hashgrid_base_resolution": 16,
+      "Phase2Field.hashgrid_per_level_scale": 1.5
+    }
+  },
+  {
+    "name": "e05_h192_l3_b32_lr1e3_hash8",
+    "scene": "office",
+    "notes": "Wider MLP plus stronger block embedding",
+    "overrides": {
+      "Phase2Field.hidden_dim": 192,
+      "Phase2Field.num_hidden_layers": 3,
+      "Phase2Field.block_embedding_dim": 32,
+      "Phase2Field.learning_rate": 0.001,
+      "Phase2Field.hashgrid_num_levels": 8,
+      "Phase2Field.hashgrid_features_per_level": 2,
+      "Phase2Field.hashgrid_log2_hashmap_size": 18,
+      "Phase2Field.hashgrid_base_resolution": 16,
+      "Phase2Field.hashgrid_per_level_scale": 1.5
+    }
+  },
+  {
+    "name": "e06_h192_l3_b32_lr5e4_hash8",
+    "scene": "office",
+    "notes": "Wider MLP plus stronger block embedding with lower lr",
+    "overrides": {
+      "Phase2Field.hidden_dim": 192,
+      "Phase2Field.num_hidden_layers": 3,
+      "Phase2Field.block_embedding_dim": 32,
+      "Phase2Field.learning_rate": 0.0005,
+      "Phase2Field.hashgrid_num_levels": 8,
+      "Phase2Field.hashgrid_features_per_level": 2,
+      "Phase2Field.hashgrid_log2_hashmap_size": 18,
+      "Phase2Field.hashgrid_base_resolution": 16,
+      "Phase2Field.hashgrid_per_level_scale": 1.5
+    }
+  },
+  {
+    "name": "e07_h256_l4_b32_lr5e4_hash12",
+    "scene": "office",
+    "notes": "Larger MLP and deeper hash-grid",
+    "overrides": {
+      "Phase2Field.hidden_dim": 256,
+      "Phase2Field.num_hidden_layers": 4,
+      "Phase2Field.block_embedding_dim": 32,
+      "Phase2Field.learning_rate": 0.0005,
+      "Phase2Field.hashgrid_num_levels": 12,
+      "Phase2Field.hashgrid_features_per_level": 2,
+      "Phase2Field.hashgrid_log2_hashmap_size": 19,
+      "Phase2Field.hashgrid_base_resolution": 16,
+      "Phase2Field.hashgrid_per_level_scale": 1.5
+    }
+  },
+  {
+    "name": "e08_h256_l4_b32_lr3e4_hash12f4",
+    "scene": "office",
+    "notes": "Largest candidate in this sweep with more hash features and smaller lr",
+    "overrides": {
+      "Phase2Field.hidden_dim": 256,
+      "Phase2Field.num_hidden_layers": 4,
+      "Phase2Field.block_embedding_dim": 32,
+      "Phase2Field.learning_rate": 0.0003,
+      "Phase2Field.hashgrid_num_levels": 12,
+      "Phase2Field.hashgrid_features_per_level": 4,
+      "Phase2Field.hashgrid_log2_hashmap_size": 19,
+      "Phase2Field.hashgrid_base_resolution": 16,
+      "Phase2Field.hashgrid_per_level_scale": 1.5
+    }
+  }
+]

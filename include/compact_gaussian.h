@@ -84,6 +84,12 @@ struct Phase2ResidualFieldOptions
 struct Phase2ResidualFieldTrainOptions
 {
     int num_fourier_frequencies = 6;
+    bool use_hashgrid_encoder = true;
+    int hashgrid_num_levels = 8;
+    int hashgrid_features_per_level = 2;
+    int hashgrid_log2_hashmap_size = 18;
+    int hashgrid_base_resolution = 16;
+    float hashgrid_per_level_scale = 1.5f;
     int hidden_dim = 128;
     int num_hidden_layers = 3;
     int batch_size = 8192;
@@ -96,12 +102,19 @@ struct Phase2ResidualFieldTrainOptions
     bool include_opacity = true;
     bool include_scaling = true;
     bool include_rotation = true;
+    bool predict_opacity = true;
+    bool predict_scaling = true;
+    bool predict_rotation = true;
     int block_embedding_dim = 8;
     bool save_decoded_compact = true;
     bool save_phase2_compact = true;
     int decoded_xyz_quant_bits = 16;
     int decoded_attribute_quant_bits = 16;
     int decoded_rotation_quant_bits = 16;
+    bool phase2_compact_pack_sh_levels = true;
+    int phase2_compact_fdc_quant_bits = 8;
+    bool phase2_compact_use_geometry_codec = true;
+    int phase2_compact_geometry_quant_bits = 16;
 };
 
 struct DecodedGaussianTensors

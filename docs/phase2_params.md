@@ -111,7 +111,7 @@ and defined in:
 
 - `include/compact_gaussian.h`
 
-### Network Size
+### Encoder / Backbone
 
 `Phase2Field.num_fourier_frequencies`
 
@@ -119,6 +119,50 @@ and defined in:
 - Code default: `6`
 - Current formal value: `6`
 - Meaning: Fourier feature frequency count for normalized XYZ input.
+
+`Phase2Field.use_hashgrid_encoder`
+
+- Type: bool
+- Code default: `true`
+- Current formal value: `1`
+- Meaning: enable the internal multi-resolution hash-grid encoder in addition to normalized XYZ / Fourier features.
+
+`Phase2Field.hashgrid_num_levels`
+
+- Type: int
+- Code default: `8`
+- Current formal value: `8`
+- Meaning: number of hash-grid levels.
+
+`Phase2Field.hashgrid_features_per_level`
+
+- Type: int
+- Code default: `2`
+- Current formal value: `2`
+- Meaning: channels per hash-grid level.
+
+`Phase2Field.hashgrid_log2_hashmap_size`
+
+- Type: int
+- Code default: `18`
+- Current formal value: `18`
+- Meaning: log2 hash table size of the internal encoder.
+
+`Phase2Field.hashgrid_base_resolution`
+
+- Type: int
+- Code default: `16`
+- Current formal value: `16`
+- Meaning: base grid resolution of the first hash-grid level.
+
+`Phase2Field.hashgrid_per_level_scale`
+
+- Type: float
+- Code default: `1.5`
+- Current formal value: `1.5`
+- Meaning: multiplicative resolution growth between levels.
+
+### MLP Size
 
 `Phase2Field.hidden_dim`
 
@@ -205,14 +249,35 @@ and defined in:
 
 - Type: bool
 - Code default: `true`
-- Current formal value: code default
+- Current formal value: `1`
 - Meaning: include rotation in field input.
+
+`Phase2Field.predict_opacity`
+
+- Type: bool
+- Code default: `true`
+- Current formal value: `1`
+- Meaning: let the field predict opacity residuals instead of storing dense per-point opacity in the final compact package.
+
+`Phase2Field.predict_scaling`
+
+- Type: bool
+- Code default: `true`
+- Current formal value: `1`
+- Meaning: let the field predict scaling residuals instead of storing dense per-point scaling in the final compact package.
+
+`Phase2Field.predict_rotation`
+
+- Type: bool
+- Code default: `true`
+- Current formal value: `1`
+- Meaning: let the field predict rotation residuals instead of storing dense per-point rotation in the final compact package.
 
 `Phase2Field.block_embedding_dim`
 
 - Type: int
 - Code default: `8`
-- Current formal value: code default
+- Current formal value: `16` in formal configs, `8` in smoke config
 - Meaning: embedding dimension for block-level locality ids.
 
 ## 5. Phase 2 Output / Deployment Parameters
@@ -252,12 +317,44 @@ and defined in:
 - Current formal value: `16`
 - Meaning: quantization bits for decoded compact rotation.
 
+`Phase2Field.phase2_compact_pack_sh_levels`
+
+- Type: bool
+- Code default: `true`
+- Current formal value: `1`
+- Meaning: bit-pack `sh_levels` in the true Phase 2 compact package.
+
+`Phase2Field.phase2_compact_fdc_quant_bits`
+
+- Type: int
+- Code default: `8`
+- Current formal value: `8`
+- Meaning: low-bit quantization for `f_dc` in the true Phase 2 compact package.
+
+`Phase2Field.phase2_compact_use_geometry_codec`
+
+- Type: bool
+- Code default: `true`
+- Current formal value: `1`
+- Meaning: write `xyz` with the internal Morton-delta geometry bitstream instead of dense tensor storage.
+
+`Phase2Field.phase2_compact_geometry_quant_bits`
+
+- Type: int
+- Code default: `16`
+- Current formal value: `16`
+- Meaning: quantization bits for the internal geometry codec.
+
 ## 6. Current Formal Preset Summary
 
 Current Phase 2 formal preset is effectively:
 
 - `Compression.mode = compact_phase2`
 - Frozen package enabled
+- `hash-grid encoder enabled`
+- `predict_opacity/scaling/rotation = 1`
+- `block_embedding_dim = 16`
+- `true phase2_compact = geometry bitstream + quantized f_dc + packed sh_levels + block bases + field weights`
 - Freeze iteration = `15000`
 - Morton sort enabled
 - XYZ normalization enabled
