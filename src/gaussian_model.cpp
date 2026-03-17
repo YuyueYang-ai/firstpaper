@@ -579,10 +579,12 @@ void GaussianModel::setRotationLearningRate(float rot_lr)
 
 void GaussianModel::resetOpacity()
 {
+    auto opacity_activation = this->getOpacityActivation();
     torch::Tensor opacities_new = general_utils::inverse_sigmoid(
-        torch::min(
-            this->getOpacityActivation(),
-            torch::ones_like(this->getOpacityActivation() * 0.01)));
+        torch::clamp(
+            torch::min(opacity_activation, 0.01f * torch::ones_like(opacity_activation)),
+            1e-6f,
+            1.0f - 1e-6f));
     torch::Tensor optimizable_tensors = this->replaceTensorToOptimizer(opacities_new, 3); // "opacity"
     this->opacity_ = optimizable_tensors;
     this->Tensor_vec_opacity_ = {this->opacity_};
@@ -1077,7 +1079,8 @@ void GaussianModel::saveCompact(
             torch::sigmoid(opacity),
             this->max_sh_degree_,
             options.sh_energy_keep_ratio,
-            options.sh_min_opacity);
+            options.sh_min_opacity,
+            options.sh_min_level);
     }
 
     features_rest = sh_bandwidth::applyLevelsToFeaturesRest(features_rest, sh_levels, this->max_sh_degree_);

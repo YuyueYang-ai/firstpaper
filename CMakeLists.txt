@@ -117,6 +117,7 @@ add_library(gaussian_mapper SHARED
     include/pruning_policy.h
     include/sh_bandwidth.h
     include/attribute_sort.h
+    include/locality_codec.h
     include/gaussian_codec.h
     include/gaussian_model.h
     include/gaussian_parameters.h
@@ -137,6 +138,7 @@ add_library(gaussian_mapper SHARED
     include/types.h
     src/gaussian_keyframe.cpp
     src/attribute_sort.cpp
+    src/locality_codec.cpp
     src/gaussian_codec.cpp
     src/gaussian_model.cpp
     src/gaussian_parameters.cpp
@@ -197,6 +199,10 @@ target_link_libraries(train_openmvg_lonlat
 add_executable(test_openmvg_lonlat examples/test_openmvg_lonlat.cpp)
 target_link_libraries(test_openmvg_lonlat
     gaussian_viewer
+    gaussian_mapper)
+
+add_executable(export_compact examples/export_compact.cpp)
+target_link_libraries(export_compact
     gaussian_mapper)
 
 # Train 360Roam scenes

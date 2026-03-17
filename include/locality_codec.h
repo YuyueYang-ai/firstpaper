@@ -21,22 +21,47 @@
 
 #pragma once
 
+#include <cstdint>
+#include <vector>
+
+#include <c10/util/Half.h>
 #include <torch/torch.h>
 
-namespace sh_bandwidth
+#include "compact_gaussian.h"
+
+namespace locality_codec
 {
 
-torch::Tensor estimateLevels(
-    const torch::Tensor& features_rest,
-    const torch::Tensor& opacity_activation,
-    int max_sh_degree,
-    float energy_keep_ratio,
-    float min_opacity,
-    int min_level = 0);
+struct RestBlockInfo
+{
+    std::uint8_t sh_level = 0;
+    std::uint16_t point_count = 0;
+    std::uint8_t residual_bits = 8;
+};
 
-torch::Tensor applyLevelsToFeaturesRest(
+struct EncodedRestPayload
+{
+    std::vector<RestBlockInfo> blocks;
+    std::vector<c10::Half> base_values;
+    std::vector<c10::Half> scale_values;
+    std::vector<std::uint8_t> residual_bytes;
+    std::size_t payload_values = 0;
+    std::size_t int4_block_count = 0;
+    std::size_t int8_block_count = 0;
+};
+
+EncodedRestPayload encodeRestPayload(
     const torch::Tensor& features_rest,
     const torch::Tensor& sh_levels,
+    int max_sh_degree,
+    const CompactExportOptions& options);
+
+std::vector<float> decodeRestPayload(
+    const EncodedRestPayload& encoded,
+    const torch::Tensor& sh_levels,
+    std::int64_t num_points,
     int max_sh_degree);
 
-}
+std::size_t restPayloadValuesForLevel(int level);
+
+} // namespace locality_codec

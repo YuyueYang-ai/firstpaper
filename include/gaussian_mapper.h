@@ -164,8 +164,13 @@ public:
     GaussianModelParams& getGaussianModelParams() { return this->model_params_; }
     void setDatasetSourcePath(std::filesystem::path dataset_path) { this->model_params_.source_path_ = dataset_path; }
     void setSensorType(SystemSensorType sensor_type) { this->sensor_type_ = sensor_type; }
+    CompressionMode compressionMode() const { return compression_mode_; }
+    bool isCompactMode() const { return compression_mode_ == CompressionMode::COMPACT; }
 
+    void exportCompact(std::filesystem::path result_dir) { saveCompact(result_dir); }
     void loadPly(std::filesystem::path ply_path, std::filesystem::path camera_path = "");
+    void loadCompact(std::filesystem::path compact_path, std::filesystem::path camera_path = "");
+    void loadResult(std::filesystem::path result_path, std::filesystem::path camera_path = "");
     void keyframesFromJson(std::filesystem::path json_path);
     void renderAndEstimateDepth(std::filesystem::path result_dir);
 
@@ -206,6 +211,10 @@ protected:
     void keyframesToJson(std::filesystem::path result_dir);
     void saveModelParams(std::filesystem::path result_dir);
     void writeKeyframeUsedTimes(std::filesystem::path result_dir, std::string name_suffix = "");
+    void loadCamera(std::filesystem::path camera_path);
+    void configureCompressionMode(CompressionMode mode);
+    static CompressionMode parseCompressionMode(const cv::FileNode& mode_node, bool has_legacy_options);
+    static bool looksLikeCompactResultPath(const std::filesystem::path& result_path);
 
 public:
     // Parameters
@@ -305,16 +314,28 @@ protected:
 
     float skip_bottom_ratio_ = 0.0f;
 
-    int late_stage_prune_interval_ = 1000;
+    CompressionMode compression_mode_ = CompressionMode::BASELINE;
+
+    int late_stage_prune_interval_ = 0;
     float late_stage_prune_min_opacity_ = 0.008f;
     float late_stage_prune_big_point_min_opacity_ = 0.02f;
     float late_stage_prune_max_scaling_ratio_ = 0.15f;
 
-    int adaptive_sh_bandwidth_interval_ = 500;
+    int adaptive_sh_bandwidth_interval_ = 0;
     float adaptive_sh_energy_keep_ratio_ = 0.995f;
     float adaptive_sh_min_opacity_ = 0.01f;
+    bool adaptive_sh_export_only_ = false;
+    float export_sh_energy_keep_ratio_ = 0.995f;
+    float export_sh_min_opacity_ = 0.01f;
+    int export_sh_min_level_ = 0;
+    bool f_rest_blockwise_quant_ = false;
+    int f_rest_block_size_ = 128;
+    bool f_rest_locality_codec_ = false;
+    int f_rest_locality_high_sh_block_size_ = 64;
+    int f_rest_locality_low_sh_block_size_ = 128;
+    float f_rest_locality_int4_rel_mse_threshold_ = 0.02f;
 
-    bool save_compact_snapshot_ = true;
+    bool save_compact_snapshot_ = false;
     CompactExportOptions compact_export_options_;
 
     bool prune_by_extent_ = true;

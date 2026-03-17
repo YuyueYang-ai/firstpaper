@@ -23,18 +23,36 @@
 
 #include <torch/torch.h>
 
+enum class CompressionMode
+{
+    BASELINE = 0,
+    COMPACT = 1
+};
+
+inline const char* compressionModeName(CompressionMode mode)
+{
+    return mode == CompressionMode::COMPACT ? "compact" : "baseline";
+}
+
 struct CompactExportOptions
 {
     bool enable_export_prune = true;
     float prune_min_opacity = 0.008f;
-    float prune_big_point_min_opacity = 0.025f;
+    float prune_big_point_min_opacity = 0.02f;
     float prune_max_scaling_ratio = 0.15f;
 
     bool enable_sh_bandwidth = true;
     float sh_energy_keep_ratio = 0.995f;
     float sh_min_opacity = 0.01f;
+    int sh_min_level = 0;
 
     bool sort_by_morton = true;
+    bool f_rest_blockwise_quant = false;
+    int f_rest_block_size = 128;
+    bool f_rest_locality_codec = false;
+    int f_rest_locality_high_sh_block_size = 64;
+    int f_rest_locality_low_sh_block_size = 128;
+    float f_rest_locality_int4_rel_mse_threshold = 0.02f;
 
     int xyz_quant_bits = 16;
     int attribute_quant_bits = 8;

@@ -19,7 +19,22 @@
  * Its usage should not break the terms in LICENSE.md.
  */
 
+#include <cctype>
+
 #include "include/gaussian_mapper.h"
+
+namespace
+{
+std::string toLowerAscii(std::string value)
+{
+    std::transform(
+        value.begin(),
+        value.end(),
+        value.begin(),
+        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return value;
+}
+}
 
 GaussianMapper::GaussianMapper(
     std::filesystem::path gaussian_config_file_path,
@@ -210,40 +225,120 @@ void GaussianMapper::readConfigFromFile(std::filesystem::path cfg_path)
     skip_bottom_ratio_ =
         settings_file["Optimization.skip_bottom_ratio"].operator float();
 
-    if (!settings_file["Compression.save_compact_snapshot"].empty())
-        save_compact_snapshot_ = (settings_file["Compression.save_compact_snapshot"].operator int()) != 0;
-    if (!settings_file["Compression.late_stage_prune_interval"].empty())
-        late_stage_prune_interval_ = settings_file["Compression.late_stage_prune_interval"].operator int();
-    if (!settings_file["Compression.late_stage_prune_min_opacity"].empty())
-        late_stage_prune_min_opacity_ = settings_file["Compression.late_stage_prune_min_opacity"].operator float();
-    if (!settings_file["Compression.late_stage_prune_big_point_min_opacity"].empty())
-        late_stage_prune_big_point_min_opacity_ = settings_file["Compression.late_stage_prune_big_point_min_opacity"].operator float();
-    if (!settings_file["Compression.late_stage_prune_max_scaling_ratio"].empty())
-        late_stage_prune_max_scaling_ratio_ = settings_file["Compression.late_stage_prune_max_scaling_ratio"].operator float();
-    if (!settings_file["Compression.adaptive_sh_bandwidth_interval"].empty())
-        adaptive_sh_bandwidth_interval_ = settings_file["Compression.adaptive_sh_bandwidth_interval"].operator int();
-    if (!settings_file["Compression.adaptive_sh_energy_keep_ratio"].empty())
-        adaptive_sh_energy_keep_ratio_ = settings_file["Compression.adaptive_sh_energy_keep_ratio"].operator float();
-    if (!settings_file["Compression.adaptive_sh_min_opacity"].empty())
-        adaptive_sh_min_opacity_ = settings_file["Compression.adaptive_sh_min_opacity"].operator float();
-    if (!settings_file["Compression.enable_export_prune"].empty())
-        compact_export_options_.enable_export_prune = (settings_file["Compression.enable_export_prune"].operator int()) != 0;
-    if (!settings_file["Compression.enable_sh_bandwidth"].empty())
-        compact_export_options_.enable_sh_bandwidth = (settings_file["Compression.enable_sh_bandwidth"].operator int()) != 0;
-    if (!settings_file["Compression.sort_by_morton"].empty())
-        compact_export_options_.sort_by_morton = (settings_file["Compression.sort_by_morton"].operator int()) != 0;
-    if (!settings_file["Compression.xyz_quant_bits"].empty())
-        compact_export_options_.xyz_quant_bits = settings_file["Compression.xyz_quant_bits"].operator int();
-    if (!settings_file["Compression.attribute_quant_bits"].empty())
-        compact_export_options_.attribute_quant_bits = settings_file["Compression.attribute_quant_bits"].operator int();
-    if (!settings_file["Compression.rotation_quant_bits"].empty())
-        compact_export_options_.rotation_quant_bits = settings_file["Compression.rotation_quant_bits"].operator int();
+    const bool has_explicit_compression_mode = !settings_file["Compression.mode"].empty();
+    const bool has_legacy_compression_options =
+        !settings_file["Compression.save_compact_snapshot"].empty() ||
+        !settings_file["Compression.late_stage_prune_interval"].empty() ||
+        !settings_file["Compression.late_stage_prune_min_opacity"].empty() ||
+        !settings_file["Compression.late_stage_prune_big_point_min_opacity"].empty() ||
+        !settings_file["Compression.late_stage_prune_max_scaling_ratio"].empty() ||
+        !settings_file["Compression.adaptive_sh_bandwidth_interval"].empty() ||
+        !settings_file["Compression.adaptive_sh_energy_keep_ratio"].empty() ||
+        !settings_file["Compression.adaptive_sh_min_opacity"].empty() ||
+        !settings_file["Compression.adaptive_sh_export_only"].empty() ||
+        !settings_file["Compression.export_sh_energy_keep_ratio"].empty() ||
+        !settings_file["Compression.export_sh_min_opacity"].empty() ||
+        !settings_file["Compression.export_sh_min_level"].empty() ||
+        !settings_file["Compression.enable_export_prune"].empty() ||
+        !settings_file["Compression.enable_sh_bandwidth"].empty() ||
+        !settings_file["Compression.sort_by_morton"].empty() ||
+        !settings_file["Compression.f_rest_blockwise_quant"].empty() ||
+        !settings_file["Compression.f_rest_block_size"].empty() ||
+        !settings_file["Compression.f_rest_locality_codec"].empty() ||
+        !settings_file["Compression.f_rest_locality_high_sh_block_size"].empty() ||
+        !settings_file["Compression.f_rest_locality_low_sh_block_size"].empty() ||
+        !settings_file["Compression.f_rest_locality_int4_rel_mse_threshold"].empty() ||
+        !settings_file["Compression.xyz_quant_bits"].empty() ||
+        !settings_file["Compression.attribute_quant_bits"].empty() ||
+        !settings_file["Compression.rotation_quant_bits"].empty();
+    configureCompressionMode(
+        parseCompressionMode(settings_file["Compression.mode"], has_legacy_compression_options));
+
+    if (!has_explicit_compression_mode || compression_mode_ == CompressionMode::COMPACT) {
+        if (!settings_file["Compression.save_compact_snapshot"].empty())
+            save_compact_snapshot_ = (settings_file["Compression.save_compact_snapshot"].operator int()) != 0;
+        if (!settings_file["Compression.late_stage_prune_interval"].empty())
+            late_stage_prune_interval_ = settings_file["Compression.late_stage_prune_interval"].operator int();
+        if (!settings_file["Compression.late_stage_prune_min_opacity"].empty())
+            late_stage_prune_min_opacity_ = settings_file["Compression.late_stage_prune_min_opacity"].operator float();
+        if (!settings_file["Compression.late_stage_prune_big_point_min_opacity"].empty())
+            late_stage_prune_big_point_min_opacity_ = settings_file["Compression.late_stage_prune_big_point_min_opacity"].operator float();
+        if (!settings_file["Compression.late_stage_prune_max_scaling_ratio"].empty())
+            late_stage_prune_max_scaling_ratio_ = settings_file["Compression.late_stage_prune_max_scaling_ratio"].operator float();
+        if (!settings_file["Compression.adaptive_sh_bandwidth_interval"].empty())
+            adaptive_sh_bandwidth_interval_ = settings_file["Compression.adaptive_sh_bandwidth_interval"].operator int();
+        if (!settings_file["Compression.adaptive_sh_energy_keep_ratio"].empty())
+            adaptive_sh_energy_keep_ratio_ = settings_file["Compression.adaptive_sh_energy_keep_ratio"].operator float();
+        if (!settings_file["Compression.adaptive_sh_min_opacity"].empty())
+            adaptive_sh_min_opacity_ = settings_file["Compression.adaptive_sh_min_opacity"].operator float();
+        if (!settings_file["Compression.adaptive_sh_export_only"].empty())
+            adaptive_sh_export_only_ = (settings_file["Compression.adaptive_sh_export_only"].operator int()) != 0;
+        if (!settings_file["Compression.export_sh_energy_keep_ratio"].empty())
+            export_sh_energy_keep_ratio_ = settings_file["Compression.export_sh_energy_keep_ratio"].operator float();
+        if (!settings_file["Compression.export_sh_min_opacity"].empty())
+            export_sh_min_opacity_ = settings_file["Compression.export_sh_min_opacity"].operator float();
+        if (!settings_file["Compression.export_sh_min_level"].empty())
+            export_sh_min_level_ = settings_file["Compression.export_sh_min_level"].operator int();
+        if (!settings_file["Compression.enable_export_prune"].empty())
+            compact_export_options_.enable_export_prune = (settings_file["Compression.enable_export_prune"].operator int()) != 0;
+        if (!settings_file["Compression.enable_sh_bandwidth"].empty())
+            compact_export_options_.enable_sh_bandwidth = (settings_file["Compression.enable_sh_bandwidth"].operator int()) != 0;
+        if (!settings_file["Compression.sort_by_morton"].empty())
+            compact_export_options_.sort_by_morton = (settings_file["Compression.sort_by_morton"].operator int()) != 0;
+        if (!settings_file["Compression.f_rest_blockwise_quant"].empty())
+            f_rest_blockwise_quant_ = (settings_file["Compression.f_rest_blockwise_quant"].operator int()) != 0;
+        if (!settings_file["Compression.f_rest_block_size"].empty())
+            f_rest_block_size_ = settings_file["Compression.f_rest_block_size"].operator int();
+        if (!settings_file["Compression.f_rest_locality_codec"].empty())
+            f_rest_locality_codec_ = (settings_file["Compression.f_rest_locality_codec"].operator int()) != 0;
+        if (!settings_file["Compression.f_rest_locality_high_sh_block_size"].empty())
+            f_rest_locality_high_sh_block_size_ =
+                settings_file["Compression.f_rest_locality_high_sh_block_size"].operator int();
+        if (!settings_file["Compression.f_rest_locality_low_sh_block_size"].empty())
+            f_rest_locality_low_sh_block_size_ =
+                settings_file["Compression.f_rest_locality_low_sh_block_size"].operator int();
+        if (!settings_file["Compression.f_rest_locality_int4_rel_mse_threshold"].empty())
+            f_rest_locality_int4_rel_mse_threshold_ =
+                settings_file["Compression.f_rest_locality_int4_rel_mse_threshold"].operator float();
+        if (!settings_file["Compression.xyz_quant_bits"].empty())
+            compact_export_options_.xyz_quant_bits = settings_file["Compression.xyz_quant_bits"].operator int();
+        if (!settings_file["Compression.attribute_quant_bits"].empty())
+            compact_export_options_.attribute_quant_bits = settings_file["Compression.attribute_quant_bits"].operator int();
+        if (!settings_file["Compression.rotation_quant_bits"].empty())
+            compact_export_options_.rotation_quant_bits = settings_file["Compression.rotation_quant_bits"].operator int();
+    }
 
     compact_export_options_.prune_min_opacity = late_stage_prune_min_opacity_;
     compact_export_options_.prune_big_point_min_opacity = late_stage_prune_big_point_min_opacity_;
     compact_export_options_.prune_max_scaling_ratio = late_stage_prune_max_scaling_ratio_;
-    compact_export_options_.sh_energy_keep_ratio = adaptive_sh_energy_keep_ratio_;
-    compact_export_options_.sh_min_opacity = adaptive_sh_min_opacity_;
+    compact_export_options_.sh_energy_keep_ratio = export_sh_energy_keep_ratio_;
+    compact_export_options_.sh_min_opacity = export_sh_min_opacity_;
+    compact_export_options_.sh_min_level = export_sh_min_level_;
+    compact_export_options_.f_rest_blockwise_quant = f_rest_blockwise_quant_;
+    compact_export_options_.f_rest_block_size = f_rest_block_size_;
+    compact_export_options_.f_rest_locality_codec = f_rest_locality_codec_;
+    compact_export_options_.f_rest_locality_high_sh_block_size = f_rest_locality_high_sh_block_size_;
+    compact_export_options_.f_rest_locality_low_sh_block_size = f_rest_locality_low_sh_block_size_;
+    compact_export_options_.f_rest_locality_int4_rel_mse_threshold = f_rest_locality_int4_rel_mse_threshold_;
+    std::cout << "[Gaussian Mapper]Compression mode: " << compressionModeName(compression_mode_) << std::endl;
+    if (compact_export_options_.enable_sh_bandwidth) {
+        std::cout << "[Gaussian Mapper]Export SH bandwidth: keep_ratio=" << compact_export_options_.sh_energy_keep_ratio
+                  << " min_opacity=" << compact_export_options_.sh_min_opacity
+                  << " min_level=" << compact_export_options_.sh_min_level
+                  << " export_only=" << (adaptive_sh_export_only_ ? "true" : "false")
+                  << std::endl;
+    }
+    if (compact_export_options_.f_rest_blockwise_quant) {
+        std::cout << "[Gaussian Mapper]f_rest blockwise quantization: block_size="
+                  << compact_export_options_.f_rest_block_size << std::endl;
+    }
+    if (compact_export_options_.f_rest_locality_codec) {
+        std::cout << "[Gaussian Mapper]f_rest locality codec: high_sh_block_size="
+                  << compact_export_options_.f_rest_locality_high_sh_block_size
+                  << " low_sh_block_size=" << compact_export_options_.f_rest_locality_low_sh_block_size
+                  << " int4_rel_mse_threshold=" << compact_export_options_.f_rest_locality_int4_rel_mse_threshold
+                  << std::endl;
+    }
 
     // Viewer Parameters
     rendered_image_viewer_scale_ =
@@ -487,7 +582,9 @@ void GaussianMapper::trainForOneIteration()
                     late_stage_prune_max_scaling_ratio_,
                     scene_->cameras_extent_);
             }
-            if (adaptive_sh_bandwidth_interval_ > 0 && getIteration() % adaptive_sh_bandwidth_interval_ == 0) {
+            if (!adaptive_sh_export_only_
+                && adaptive_sh_bandwidth_interval_ > 0
+                && getIteration() % adaptive_sh_bandwidth_interval_ == 0) {
                 gaussians_->updateAdaptiveShBandwidth(
                     adaptive_sh_energy_keep_ratio_,
                     adaptive_sh_min_opacity_);
@@ -536,6 +633,90 @@ bool GaussianMapper::isStopped()
 {
     std::unique_lock<std::mutex> lock_status(this->mutex_status_);
     return this->stopped_;
+}
+
+void GaussianMapper::configureCompressionMode(CompressionMode mode)
+{
+    compression_mode_ = mode;
+
+    late_stage_prune_min_opacity_ = 0.008f;
+    late_stage_prune_big_point_min_opacity_ = 0.02f;
+    late_stage_prune_max_scaling_ratio_ = 0.15f;
+    adaptive_sh_energy_keep_ratio_ = 0.995f;
+    adaptive_sh_min_opacity_ = 0.01f;
+    adaptive_sh_export_only_ = false;
+    export_sh_energy_keep_ratio_ = adaptive_sh_energy_keep_ratio_;
+    export_sh_min_opacity_ = adaptive_sh_min_opacity_;
+    export_sh_min_level_ = 0;
+    f_rest_blockwise_quant_ = false;
+    f_rest_block_size_ = 128;
+    f_rest_locality_codec_ = false;
+    f_rest_locality_high_sh_block_size_ = 64;
+    f_rest_locality_low_sh_block_size_ = 128;
+    f_rest_locality_int4_rel_mse_threshold_ = 0.02f;
+
+    compact_export_options_ = CompactExportOptions();
+    compact_export_options_.prune_min_opacity = late_stage_prune_min_opacity_;
+    compact_export_options_.prune_big_point_min_opacity = late_stage_prune_big_point_min_opacity_;
+    compact_export_options_.prune_max_scaling_ratio = late_stage_prune_max_scaling_ratio_;
+    compact_export_options_.sh_energy_keep_ratio = export_sh_energy_keep_ratio_;
+    compact_export_options_.sh_min_opacity = export_sh_min_opacity_;
+    compact_export_options_.sh_min_level = export_sh_min_level_;
+    compact_export_options_.f_rest_blockwise_quant = f_rest_blockwise_quant_;
+    compact_export_options_.f_rest_block_size = f_rest_block_size_;
+    compact_export_options_.f_rest_locality_codec = f_rest_locality_codec_;
+    compact_export_options_.f_rest_locality_high_sh_block_size = f_rest_locality_high_sh_block_size_;
+    compact_export_options_.f_rest_locality_low_sh_block_size = f_rest_locality_low_sh_block_size_;
+    compact_export_options_.f_rest_locality_int4_rel_mse_threshold = f_rest_locality_int4_rel_mse_threshold_;
+
+    if (mode == CompressionMode::COMPACT) {
+        save_compact_snapshot_ = true;
+        late_stage_prune_interval_ = 1000;
+        adaptive_sh_bandwidth_interval_ = 500;
+        return;
+    }
+
+    save_compact_snapshot_ = false;
+    late_stage_prune_interval_ = 0;
+    adaptive_sh_bandwidth_interval_ = 0;
+    compact_export_options_.enable_export_prune = false;
+    compact_export_options_.enable_sh_bandwidth = false;
+    compact_export_options_.sort_by_morton = false;
+    compact_export_options_.f_rest_blockwise_quant = false;
+    compact_export_options_.f_rest_locality_codec = false;
+}
+
+CompressionMode GaussianMapper::parseCompressionMode(
+    const cv::FileNode& mode_node,
+    bool has_legacy_options)
+{
+    if (mode_node.empty())
+        return has_legacy_options ? CompressionMode::COMPACT : CompressionMode::BASELINE;
+
+    if (mode_node.isInt()) {
+        const int mode_value = mode_node.operator int();
+        if (mode_value == 0)
+            return CompressionMode::BASELINE;
+        if (mode_value == 1)
+            return CompressionMode::COMPACT;
+    }
+
+    const std::string mode_value = toLowerAscii(mode_node.string());
+    if (mode_value == "baseline" || mode_value == "base" || mode_value == "0")
+        return CompressionMode::BASELINE;
+    if (mode_value == "compact" || mode_value == "compressed" || mode_value == "1")
+        return CompressionMode::COMPACT;
+
+    throw std::runtime_error("Unsupported Compression.mode: " + mode_node.string());
+}
+
+bool GaussianMapper::looksLikeCompactResultPath(const std::filesystem::path& result_path)
+{
+    if (result_path.empty())
+        return false;
+    if (std::filesystem::is_directory(result_path))
+        return std::filesystem::exists(result_path / "metadata.json");
+    return result_path.filename() == "metadata.json";
 }
 
 void GaussianMapper::signalStop(const bool going_to_stop)
@@ -925,7 +1106,11 @@ void GaussianMapper::saveCompact(std::filesystem::path result_dir)
     compact_dir = compact_dir / ("iteration_" + std::to_string(getIteration()));
     CHECK_DIRECTORY_AND_CREATE_IF_NOT_EXISTS(compact_dir)
 
-    gaussians_->saveCompact(compact_dir, scene_->cameras_extent_, compact_export_options_);
+    CompactExportOptions export_options = compact_export_options_;
+    if (scene_->cameras_extent_ <= 0.0f)
+        export_options.enable_export_prune = false;
+
+    gaussians_->saveCompact(compact_dir, scene_->cameras_extent_, export_options);
 }
 
 void GaussianMapper::keyframesToJson(std::filesystem::path result_dir)
@@ -1239,9 +1424,47 @@ void GaussianMapper::setVaribleParameters(const VariableParameters &params)
 void GaussianMapper::loadPly(std::filesystem::path ply_path, std::filesystem::path camera_path)
 {
     this->gaussians_->loadPly(ply_path);
+    loadCamera(camera_path);
+
+    // Ready
+    this->initial_mapped_ = true;
+}
+
+void GaussianMapper::loadCompact(std::filesystem::path compact_path, std::filesystem::path camera_path)
+{
+    if (compact_path.filename() == "metadata.json")
+        compact_path = compact_path.parent_path();
+    if (!std::filesystem::exists(compact_path / "metadata.json"))
+        throw std::runtime_error("Cannot find compact metadata at " + (compact_path / "metadata.json").string());
+
+    this->gaussians_->loadCompact(compact_path);
+    loadCamera(camera_path);
+
+    // Ready
+    this->initial_mapped_ = true;
+}
+
+void GaussianMapper::loadResult(std::filesystem::path result_path, std::filesystem::path camera_path)
+{
+    if (looksLikeCompactResultPath(result_path))
+        loadCompact(result_path, camera_path);
+    else
+        loadPly(result_path, camera_path);
+}
+
+void GaussianMapper::loadCamera(std::filesystem::path camera_path)
+{
+    if (camera_path.empty())
+        return;
 
     // Camera
-    if (!camera_path.empty() && std::filesystem::exists(camera_path)) {
+    if (std::filesystem::exists(camera_path)) {
+        scene_->cameras_.clear();
+        undistort_mask_.clear();
+        viewer_main_undistort_mask_.clear();
+        viewer_sub_undistort_mask_.clear();
+        viewer_camera_id_set_ = false;
+
         cv::FileStorage camera_file(camera_path.string().c_str(), cv::FileStorage::READ);
         if(!camera_file.isOpened())
             throw std::runtime_error("[Gaussian Mapper]Failed to open settings file at: " + camera_path.string());
@@ -1333,9 +1556,6 @@ void GaussianMapper::loadPly(std::filesystem::path ply_path, std::filesystem::pa
         }
         this->scene_->addCamera(camera);
     }
-
-    // Ready
-    this->initial_mapped_ = true;
 }
 
 void GaussianMapper::keyframesFromJson(std::filesystem::path json_path)

@@ -87,6 +87,7 @@ GaussianViewer.image_scale: 0.5
 GaussianViewer.image_scale_main: 1.0
 GaussianViewer.camera_watch_dist: 0.000001
 
+Compression.mode: "compact"
 Compression.save_compact_snapshot: 1
 Compression.late_stage_prune_interval: 1000
 Compression.late_stage_prune_min_opacity: 0.008

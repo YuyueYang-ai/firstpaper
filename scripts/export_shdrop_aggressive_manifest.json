@@ -1,0 +1,42 @@
+[
+  {
+    "label": "office_compact_fixed_reference",
+    "scene": "office",
+    "variant": "compact_fixed_reference",
+    "train_root": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results/formal_compare/office_compact_30k",
+    "model_path": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results/formal_compare/office_compact_30k/30081_shutdown/ply/compact_fixed/iteration_30081",
+    "ply_path": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results/formal_compare/office_compact_30k/30081_shutdown/ply/point_cloud/iteration_30081/point_cloud.ply",
+    "compact_dir": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results/formal_compare/office_compact_30k/30081_shutdown/ply/compact_fixed/iteration_30081",
+    "eval_dir": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results/formal_compare/office_compact_30k/30081_shutdown_eval_compact_fixed/0_test"
+  },
+  {
+    "label": "office_compact_export_shdrop_aggressive",
+    "scene": "office",
+    "variant": "compact_export_shdrop_aggressive",
+    "train_root": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results/formal_compare/office_compact_30k",
+    "model_path": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results/formal_compare/office_compact_30k/30081_shutdown/ply/compact_export_shdrop/iteration_30081",
+    "ply_path": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results/formal_compare/office_compact_30k/30081_shutdown/ply/point_cloud/iteration_30081/point_cloud.ply",
+    "compact_dir": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results/formal_compare/office_compact_30k/30081_shutdown/ply/compact_export_shdrop/iteration_30081",
+    "eval_dir": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results_smoke/office_export_shdrop_eval/0_test"
+  },
+  {
+    "label": "turtlebot_compact_fixed_reference",
+    "scene": "turtlebot_pyebaekRoom_1_scene_1",
+    "variant": "compact_fixed_reference",
+    "train_root": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results/formal_compare/turtlebot_pyebaekRoom_1_scene_1_compact_32000",
+    "model_path": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results/formal_compare/turtlebot_pyebaekRoom_1_scene_1_compact_32000/32081_shutdown/ply/compact_fixed/iteration_32081",
+    "ply_path": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results/formal_compare/turtlebot_pyebaekRoom_1_scene_1_compact_32000/32081_shutdown/ply/point_cloud/iteration_32081/point_cloud.ply",
+    "compact_dir": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results/formal_compare/turtlebot_pyebaekRoom_1_scene_1_compact_32000/32081_shutdown/ply/compact_fixed/iteration_32081",
+    "eval_dir": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results/formal_compare/turtlebot_pyebaekRoom_1_scene_1_compact_32000/32081_shutdown_eval_compact_fixed/0_test"
+  },
+  {
+    "label": "turtlebot_compact_export_shdrop_aggressive",
+    "scene": "turtlebot_pyebaekRoom_1_scene_1",
+    "variant": "compact_export_shdrop_aggressive",
+    "train_root": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results/formal_compare/turtlebot_pyebaekRoom_1_scene_1_compact_32000",
+    "model_path": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results/formal_compare/turtlebot_pyebaekRoom_1_scene_1_compact_32000/32081_shutdown/ply/compact_export_shdrop/iteration_32081",
+    "ply_path": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results/formal_compare/turtlebot_pyebaekRoom_1_scene_1_compact_32000/32081_shutdown/ply/point_cloud/iteration_32081/point_cloud.ply",
+    "compact_dir": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results/formal_compare/turtlebot_pyebaekRoom_1_scene_1_compact_32000/32081_shutdown/ply/compact_export_shdrop/iteration_32081",
+    "eval_dir": "/media/yunxiangyang/Train/PanoCompactGS/omniGS/results_smoke/turtlebot_export_shdrop_eval/0_test"
+  }
+]

@@ -46,12 +46,15 @@ torch::Tensor estimateLevels(
     const torch::Tensor& opacity_activation,
     int max_sh_degree,
     float energy_keep_ratio,
-    float min_opacity)
+    float min_opacity,
+    int min_level)
 {
     if (!features_rest.defined() || features_rest.numel() == 0 || max_sh_degree <= 0) {
         auto num_points = features_rest.defined() ? features_rest.size(0) : opacity_activation.size(0);
         return torch::zeros({num_points}, torch::TensorOptions().dtype(torch::kInt32).device(opacity_activation.device()));
     }
+
+    min_level = std::clamp(min_level, 0, max_sh_degree);
 
     auto total_energy = torch::zeros(
         {features_rest.size(0)},
@@ -92,6 +95,15 @@ torch::Tensor estimateLevels(
     if (opacity_activation.defined() && opacity_activation.numel() > 0) {
         auto low_opacity = opacity_activation.squeeze(-1) < min_opacity;
         levels.index_put_({low_opacity}, 0);
+    }
+
+    if (min_level > 0) {
+        auto keep_floor_mask = levels > 0;
+        if (keep_floor_mask.any().item<bool>()) {
+            levels.index_put_(
+                {keep_floor_mask},
+                torch::clamp_min(levels.index({keep_floor_mask}), min_level));
+        }
     }
 
     return levels;

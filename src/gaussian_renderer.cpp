@@ -45,7 +45,8 @@ GaussianRenderer::render(
      */
 
     // Create zero tensor. We will use it to make pytorch return gradients of the 2D (screen-space) means
-    auto screenspace_points = torch::zeros_like(pc->getXYZ(),
+    auto screenspace_points = torch::zeros(
+        {pc->getXYZ().size(0), 4},
         torch::TensorOptions().dtype(pc->getXYZ().dtype()).requires_grad(true).device(torch::kCUDA));
     try {
         screenspace_points.retain_grad();
@@ -181,7 +182,8 @@ GaussianRenderer::renderLonlat(
      */
 
     // Create zero tensor. We will use it to make pytorch return gradients of the 2D (screen-space) means
-    auto screenspace_points = torch::zeros_like(pc->getXYZ(),
+    auto screenspace_points = torch::zeros(
+        {pc->getXYZ().size(0), 4},
         torch::TensorOptions().dtype(pc->getXYZ().dtype()).requires_grad(true).device(torch::kCUDA));
     try {
         screenspace_points.retain_grad();

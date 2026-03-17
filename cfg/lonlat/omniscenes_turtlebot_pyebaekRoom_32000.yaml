@@ -78,6 +78,7 @@ Optimization.skip_bottom_ratio: 0.0
 # Compression Parameters
 #--------------------------------------------------------------------------------------------
 
+Compression.mode: "compact"
 Compression.save_compact_snapshot: 1
 Compression.late_stage_prune_interval: 1000
 Compression.late_stage_prune_min_opacity: 0.008

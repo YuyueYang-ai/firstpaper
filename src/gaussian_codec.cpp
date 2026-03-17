@@ -33,6 +33,9 @@
 
 #include <json/json.h>
 
+#include "include/general_utils.h"
+#include "include/locality_codec.h"
+
 namespace
 {
 
@@ -81,12 +84,23 @@ Quantized2D<QType> quantize2D(const torch::Tensor& tensor, int64_t rows, int64_t
     quantized.data.resize(rows * cols);
     quantized.mins.assign(cols, std::numeric_limits<float>::max());
     quantized.maxs.assign(cols, std::numeric_limits<float>::lowest());
+    std::vector<bool> has_finite(cols, false);
 
     for (int64_t row = 0; row < rows; ++row) {
         for (int64_t col = 0; col < cols; ++col) {
             const float value = ptr[row * cols + col];
+            if (!std::isfinite(value))
+                continue;
             quantized.mins[col] = std::min(quantized.mins[col], value);
             quantized.maxs[col] = std::max(quantized.maxs[col], value);
+            has_finite[col] = true;
+        }
+    }
+
+    for (int64_t col = 0; col < cols; ++col) {
+        if (!has_finite[col]) {
+            quantized.mins[col] = 0.0f;
+            quantized.maxs[col] = 0.0f;
         }
     }
 
@@ -95,7 +109,9 @@ Quantized2D<QType> quantize2D(const torch::Tensor& tensor, int64_t rows, int64_t
         for (int64_t col = 0; col < cols; ++col) {
             const float min_value = quantized.mins[col];
             const float max_value = quantized.maxs[col];
-            const float value = ptr[row * cols + col];
+            float value = ptr[row * cols + col];
+            if (!std::isfinite(value))
+                value = std::signbit(value) ? min_value : max_value;
             QType q = 0;
             if (max_value - min_value > 1e-8f) {
                 double normalized = static_cast<double>(value - min_value) / static_cast<double>(max_value - min_value);
@@ -149,6 +165,14 @@ struct Quantized1D
 };
 
 template<typename QType>
+struct Quantized1DBlockwise
+{
+    std::vector<QType> data;
+    std::vector<float> min_values;
+    std::vector<float> max_values;
+};
+
+template<typename QType>
 Quantized1D<QType> quantize1D(const std::vector<float>& values)
 {
     Quantized1D<QType> quantized;
@@ -156,16 +180,31 @@ Quantized1D<QType> quantize1D(const std::vector<float>& values)
     if (values.empty())
         return quantized;
 
-    auto [min_it, max_it] = std::minmax_element(values.begin(), values.end());
-    quantized.min_value = *min_it;
-    quantized.max_value = *max_it;
+    bool has_finite = false;
+    quantized.min_value = std::numeric_limits<float>::max();
+    quantized.max_value = std::numeric_limits<float>::lowest();
+    for (float value : values) {
+        if (!std::isfinite(value))
+            continue;
+        quantized.min_value = std::min(quantized.min_value, value);
+        quantized.max_value = std::max(quantized.max_value, value);
+        has_finite = true;
+    }
+    if (!has_finite) {
+        quantized.min_value = 0.0f;
+        quantized.max_value = 0.0f;
+        return quantized;
+    }
 
     const double levels = static_cast<double>(std::numeric_limits<QType>::max());
     if (quantized.max_value - quantized.min_value <= 1e-8f)
         return quantized;
 
     for (std::size_t idx = 0; idx < values.size(); ++idx) {
-        double normalized = static_cast<double>(values[idx] - quantized.min_value)
+        float value = values[idx];
+        if (!std::isfinite(value))
+            value = std::signbit(value) ? quantized.min_value : quantized.max_value;
+        double normalized = static_cast<double>(value - quantized.min_value)
                             / static_cast<double>(quantized.max_value - quantized.min_value);
         normalized = std::clamp(normalized, 0.0, 1.0);
         quantized.data[idx] = static_cast<QType>(std::llround(normalized * levels));
@@ -184,6 +223,125 @@ std::vector<float> dequantize1D(const std::vector<QType>& values, float min_valu
     for (std::size_t idx = 0; idx < values.size(); ++idx) {
         decoded[idx] = min_value + static_cast<float>(static_cast<double>(values[idx]) / levels) * (max_value - min_value);
     }
+    return decoded;
+}
+
+std::size_t restPayloadValuesForLevel(int level)
+{
+    const int coeff_count = std::max(0, (level + 1) * (level + 1) - 1);
+    return static_cast<std::size_t>(coeff_count * 3);
+}
+
+std::vector<std::size_t> buildRestBlockPayloadCounts(
+    const torch::Tensor& sh_levels,
+    int64_t num_points,
+    int max_sh_degree,
+    int block_size_points)
+{
+    std::vector<std::size_t> block_payload_counts;
+    if (num_points <= 0)
+        return block_payload_counts;
+
+    const int clamped_block_size_points = std::max(1, block_size_points);
+    const int64_t block_count = (num_points + clamped_block_size_points - 1) / clamped_block_size_points;
+    block_payload_counts.assign(static_cast<std::size_t>(block_count), 0);
+
+    auto levels_cpu = sh_levels.detach().contiguous().to(torch::kCPU, torch::kInt32);
+    const int32_t* levels_ptr = levels_cpu.data_ptr<int32_t>();
+
+    for (int64_t point_idx = 0; point_idx < num_points; ++point_idx) {
+        const int level = std::clamp(levels_ptr[point_idx], 0, max_sh_degree);
+        const std::size_t block_idx = static_cast<std::size_t>(point_idx / clamped_block_size_points);
+        block_payload_counts[block_idx] += restPayloadValuesForLevel(level);
+    }
+
+    return block_payload_counts;
+}
+
+template<typename QType>
+Quantized1DBlockwise<QType> quantize1DBlockwise(
+    const std::vector<float>& values,
+    const std::vector<std::size_t>& block_sizes)
+{
+    Quantized1DBlockwise<QType> quantized;
+    quantized.data.resize(values.size(), 0);
+    quantized.min_values.resize(block_sizes.size(), 0.0f);
+    quantized.max_values.resize(block_sizes.size(), 0.0f);
+    if (values.empty())
+        return quantized;
+
+    const double levels = static_cast<double>(std::numeric_limits<QType>::max());
+    std::size_t offset = 0;
+    for (std::size_t block_idx = 0; block_idx < block_sizes.size(); ++block_idx) {
+        const std::size_t block_size = block_sizes[block_idx];
+        bool has_finite = false;
+        float min_value = std::numeric_limits<float>::max();
+        float max_value = std::numeric_limits<float>::lowest();
+        for (std::size_t idx = 0; idx < block_size; ++idx) {
+            const float value = values[offset + idx];
+            if (!std::isfinite(value))
+                continue;
+            min_value = std::min(min_value, value);
+            max_value = std::max(max_value, value);
+            has_finite = true;
+        }
+        if (!has_finite) {
+            min_value = 0.0f;
+            max_value = 0.0f;
+        }
+        quantized.min_values[block_idx] = min_value;
+        quantized.max_values[block_idx] = max_value;
+
+        if (max_value - min_value > 1e-8f) {
+            for (std::size_t idx = 0; idx < block_size; ++idx) {
+                float value = values[offset + idx];
+                if (!std::isfinite(value))
+                    value = std::signbit(value) ? min_value : max_value;
+                double normalized = static_cast<double>(value - min_value)
+                                    / static_cast<double>(max_value - min_value);
+                normalized = std::clamp(normalized, 0.0, 1.0);
+                quantized.data[offset + idx] = static_cast<QType>(std::llround(normalized * levels));
+            }
+        }
+
+        offset += block_size;
+    }
+
+    return quantized;
+}
+
+template<typename QType>
+std::vector<float> dequantize1DBlockwise(
+    const std::vector<QType>& values,
+    const std::vector<std::size_t>& block_sizes,
+    const std::vector<float>& min_values,
+    const std::vector<float>& max_values)
+{
+    if (block_sizes.size() != min_values.size() || block_sizes.size() != max_values.size())
+        throw std::runtime_error("Invalid blockwise f_rest metadata.");
+
+    std::vector<float> decoded(values.size(), 0.0f);
+    const double levels = static_cast<double>(std::numeric_limits<QType>::max());
+    std::size_t offset = 0;
+    for (std::size_t block_idx = 0; block_idx < block_sizes.size(); ++block_idx) {
+        const std::size_t block_size = block_sizes[block_idx];
+        const float min_value = min_values[block_idx];
+        const float max_value = max_values[block_idx];
+        if (max_value - min_value <= 1e-8f) {
+            std::fill(decoded.begin() + static_cast<std::ptrdiff_t>(offset),
+                      decoded.begin() + static_cast<std::ptrdiff_t>(offset + block_size),
+                      min_value);
+        }
+        else {
+            for (std::size_t idx = 0; idx < block_size; ++idx) {
+                decoded[offset + idx] =
+                    min_value + static_cast<float>(static_cast<double>(values[offset + idx]) / levels)
+                                    * (max_value - min_value);
+            }
+        }
+        offset += block_size;
+    }
+
     return decoded;
 }
 
@@ -301,6 +459,9 @@ void GaussianCodec::save(
     meta["rest_payload_values"] = static_cast<Json::UInt64>(0);
     meta["rotation_storage"] = use_rot_u16 ? "uint16" : "uint8";
     meta["attribute_storage"] = use_attr_u16 ? "uint16" : "uint8";
+    meta["opacity_representation"] = "activation";
+
+    const auto opacity_activation = torch::clamp(torch::sigmoid(decoded.opacity), 1e-6f, 1.0f - 1e-6f);
 
     const auto xyz_quant = quantize2D<uint16_t>(decoded.xyz, num_points, 3);
     writeBinary(result_dir / "xyz.bin", xyz_quant.data);
@@ -309,7 +470,7 @@ void GaussianCodec::save(
 
     if (use_attr_u16) {
         const auto fdc_quant = quantize2D<uint16_t>(decoded.features_dc, num_points, 3);
-        const auto opacity_quant = quantize2D<uint16_t>(decoded.opacity, num_points, 1);
+        const auto opacity_quant = quantize2D<uint16_t>(opacity_activation, num_points, 1);
         const auto scaling_quant = quantize2D<uint16_t>(decoded.scaling, num_points, 3);
         writeBinary(result_dir / "f_dc.bin", fdc_quant.data);
         writeBinary(result_dir / "opacity.bin", opacity_quant.data);
@@ -323,7 +484,7 @@ void GaussianCodec::save(
     }
     else {
         const auto fdc_quant = quantize2D<uint8_t>(decoded.features_dc, num_points, 3);
-        const auto opacity_quant = quantize2D<uint8_t>(decoded.opacity, num_points, 1);
+        const auto opacity_quant = quantize2D<uint8_t>(opacity_activation, num_points, 1);
         const auto scaling_quant = quantize2D<uint8_t>(decoded.scaling, num_points, 3);
         writeBinary(result_dir / "f_dc.bin", fdc_quant.data);
         writeBinary(result_dir / "opacity.bin", opacity_quant.data);
@@ -351,17 +512,80 @@ void GaussianCodec::save(
 
     auto rest_payload = buildRestPayload(decoded.features_rest, decoded.sh_levels, decoded.max_sh_degree);
     meta["rest_payload_values"] = static_cast<Json::UInt64>(rest_payload.size());
-    if (use_attr_u16) {
-        const auto rest_quant = quantize1D<uint16_t>(rest_payload);
-        writeBinary(result_dir / "f_rest.bin", rest_quant.data);
-        meta["f_rest"]["min"] = rest_quant.min_value;
-        meta["f_rest"]["max"] = rest_quant.max_value;
+    const bool use_rest_locality = options.f_rest_locality_codec;
+    const bool use_rest_blockwise =
+        !use_rest_locality && options.f_rest_blockwise_quant && num_points > options.f_rest_block_size;
+    if (use_rest_locality) {
+        const auto encoded_rest = locality_codec::encodeRestPayload(
+            decoded.features_rest,
+            decoded.sh_levels,
+            decoded.max_sh_degree,
+            options);
+        std::vector<uint8_t> block_levels;
+        std::vector<uint16_t> block_point_counts;
+        std::vector<uint8_t> block_bits;
+        block_levels.reserve(encoded_rest.blocks.size());
+        block_point_counts.reserve(encoded_rest.blocks.size());
+        block_bits.reserve(encoded_rest.blocks.size());
+        for (const auto& block : encoded_rest.blocks) {
+            block_levels.push_back(block.sh_level);
+            block_point_counts.push_back(block.point_count);
+            block_bits.push_back(block.residual_bits);
+        }
+
+        meta["rest_payload_values"] = static_cast<Json::UInt64>(encoded_rest.payload_values);
+        meta["f_rest"]["quantization_mode"] = "locality_residual";
+        meta["f_rest"]["representation"] = "block_shared_residual";
+        meta["f_rest"]["block_layout"] = "morton_sh_homogeneous";
+        meta["f_rest"]["base_storage"] = "fp16";
+        meta["f_rest"]["scale_storage"] = "fp16";
+        meta["f_rest"]["residual_storage"] = "adaptive_int4_int8_packed";
+        meta["f_rest"]["high_sh_block_size_points"] = options.f_rest_locality_high_sh_block_size;
+        meta["f_rest"]["low_sh_block_size_points"] = options.f_rest_locality_low_sh_block_size;
+        meta["f_rest"]["int4_rel_mse_threshold"] = options.f_rest_locality_int4_rel_mse_threshold;
+        meta["f_rest"]["block_count"] = static_cast<Json::UInt64>(encoded_rest.blocks.size());
+        meta["f_rest"]["int4_block_count"] = static_cast<Json::UInt64>(encoded_rest.int4_block_count);
+        meta["f_rest"]["int8_block_count"] = static_cast<Json::UInt64>(encoded_rest.int8_block_count);
+        writeBinary(result_dir / "f_rest.bin", encoded_rest.residual_bytes);
+        writeBinary(result_dir / "f_rest_block_levels.bin", block_levels);
+        writeBinary(result_dir / "f_rest_block_point_counts.bin", block_point_counts);
+        writeBinary(result_dir / "f_rest_block_bits.bin", block_bits);
+        writeBinary(result_dir / "f_rest_block_base.bin", encoded_rest.base_values);
+        writeBinary(result_dir / "f_rest_block_scale.bin", encoded_rest.scale_values);
+    }
+    else if (use_rest_blockwise) {
+        const int block_size_points = std::max(1, options.f_rest_block_size);
+        const auto block_sizes = buildRestBlockPayloadCounts(decoded.sh_levels, num_points, decoded.max_sh_degree, block_size_points);
+        meta["f_rest"]["quantization_mode"] = "blockwise_1d";
+        meta["f_rest"]["block_size_points"] = block_size_points;
+        meta["f_rest"]["block_count"] = static_cast<Json::UInt64>(block_sizes.size());
+        if (use_attr_u16) {
+            const auto rest_quant = quantize1DBlockwise<uint16_t>(rest_payload, block_sizes);
+            writeBinary(result_dir / "f_rest.bin", rest_quant.data);
+            writeBinary(result_dir / "f_rest_block_mins.bin", rest_quant.min_values);
+            writeBinary(result_dir / "f_rest_block_maxs.bin", rest_quant.max_values);
+        }
+        else {
+            const auto rest_quant = quantize1DBlockwise<uint8_t>(rest_payload, block_sizes);
+            writeBinary(result_dir / "f_rest.bin", rest_quant.data);
+            writeBinary(result_dir / "f_rest_block_mins.bin", rest_quant.min_values);
+            writeBinary(result_dir / "f_rest_block_maxs.bin", rest_quant.max_values);
+        }
     }
     else {
-        const auto rest_quant = quantize1D<uint8_t>(rest_payload);
-        writeBinary(result_dir / "f_rest.bin", rest_quant.data);
-        meta["f_rest"]["min"] = rest_quant.min_value;
-        meta["f_rest"]["max"] = rest_quant.max_value;
+        meta["f_rest"]["quantization_mode"] = "global_1d";
+        if (use_attr_u16) {
+            const auto rest_quant = quantize1D<uint16_t>(rest_payload);
+            writeBinary(result_dir / "f_rest.bin", rest_quant.data);
+            meta["f_rest"]["min"] = rest_quant.min_value;
+            meta["f_rest"]["max"] = rest_quant.max_value;
+        }
+        else {
+            const auto rest_quant = quantize1D<uint8_t>(rest_payload);
+            writeBinary(result_dir / "f_rest.bin", rest_quant.data);
+            meta["f_rest"]["min"] = rest_quant.min_value;
+            meta["f_rest"]["max"] = rest_quant.max_value;
+        }
     }
 
     writeBinary(result_dir / "sh_levels.bin", sh_levels);
@@ -392,6 +616,8 @@ DecodedGaussianTensors GaussianCodec::load(
     const int active_sh_degree = meta["active_sh_degree"].asInt();
     const bool attr_u16 = meta["attribute_storage"].asString() == "uint16";
     const bool rot_u16 = meta["rotation_storage"].asString() == "uint16";
+    const std::string opacity_representation =
+        meta.isMember("opacity_representation") ? meta["opacity_representation"].asString() : "logit";
 
     auto sh_levels_raw = readBinary<uint8_t>(result_dir / "sh_levels.bin", static_cast<std::size_t>(num_points));
     auto sh_levels = torch::from_blob(
@@ -479,17 +705,77 @@ DecodedGaussianTensors GaussianCodec::load(
 
     const std::size_t rest_payload_values = static_cast<std::size_t>(meta["rest_payload_values"].asUInt64());
     std::vector<float> rest_payload;
-    if (attr_u16) {
-        rest_payload = dequantize1D<uint16_t>(
-            readBinary<uint16_t>(result_dir / "f_rest.bin", rest_payload_values),
-            meta["f_rest"]["min"].asFloat(),
-            meta["f_rest"]["max"].asFloat());
+    const std::string rest_quantization_mode =
+        meta["f_rest"].isMember("quantization_mode") ? meta["f_rest"]["quantization_mode"].asString() : "global_1d";
+    if (rest_quantization_mode == "locality_residual") {
+        const std::size_t block_count = static_cast<std::size_t>(meta["f_rest"]["block_count"].asUInt64());
+        auto block_levels = readBinary<uint8_t>(result_dir / "f_rest_block_levels.bin", block_count);
+        auto block_point_counts = readBinary<uint16_t>(result_dir / "f_rest_block_point_counts.bin", block_count);
+        auto block_bits = readBinary<uint8_t>(result_dir / "f_rest_block_bits.bin", block_count);
+
+        locality_codec::EncodedRestPayload encoded_rest;
+        encoded_rest.blocks.resize(block_count);
+        encoded_rest.payload_values = rest_payload_values;
+        for (std::size_t block_idx = 0; block_idx < block_count; ++block_idx) {
+            encoded_rest.blocks[block_idx].sh_level = block_levels[block_idx];
+            encoded_rest.blocks[block_idx].point_count = block_point_counts[block_idx];
+            encoded_rest.blocks[block_idx].residual_bits = block_bits[block_idx];
+            if (block_bits[block_idx] == 4)
+                ++encoded_rest.int4_block_count;
+            else
+                ++encoded_rest.int8_block_count;
+        }
+
+        std::size_t base_value_count = 0;
+        for (const auto& block : encoded_rest.blocks)
+            base_value_count += locality_codec::restPayloadValuesForLevel(block.sh_level);
+
+        encoded_rest.base_values = readBinary<c10::Half>(result_dir / "f_rest_block_base.bin", base_value_count);
+        encoded_rest.scale_values = readBinary<c10::Half>(result_dir / "f_rest_block_scale.bin", base_value_count);
+        const std::uint64_t residual_bytes = std::filesystem::exists(result_dir / "f_rest.bin")
+                                                 ? static_cast<std::uint64_t>(std::filesystem::file_size(result_dir / "f_rest.bin"))
+                                                 : 0;
+        encoded_rest.residual_bytes = readBinary<uint8_t>(result_dir / "f_rest.bin", static_cast<std::size_t>(residual_bytes));
+        rest_payload = locality_codec::decodeRestPayload(encoded_rest, sh_levels, num_points, max_sh_degree);
+    }
+    else if (rest_quantization_mode == "blockwise_1d") {
+        const int block_size_points = std::max(1, meta["f_rest"].get("block_size_points", 128).asInt());
+        const auto block_sizes = buildRestBlockPayloadCounts(sh_levels, num_points, max_sh_degree, block_size_points);
+        const std::size_t block_count = static_cast<std::size_t>(meta["f_rest"].get(
+            "block_count", static_cast<Json::UInt64>(block_sizes.size())).asUInt64());
+        if (block_count != block_sizes.size())
+            throw std::runtime_error("Compact package f_rest block count does not match SH payload layout.");
+
+        const auto block_mins = readBinary<float>(result_dir / "f_rest_block_mins.bin", block_sizes.size());
+        const auto block_maxs = readBinary<float>(result_dir / "f_rest_block_maxs.bin", block_sizes.size());
+        if (attr_u16) {
+            rest_payload = dequantize1DBlockwise<uint16_t>(
+                readBinary<uint16_t>(result_dir / "f_rest.bin", rest_payload_values),
+                block_sizes,
+                block_mins,
+                block_maxs);
+        }
+        else {
+            rest_payload = dequantize1DBlockwise<uint8_t>(
+                readBinary<uint8_t>(result_dir / "f_rest.bin", rest_payload_values),
+                block_sizes,
+                block_mins,
+                block_maxs);
+        }
     }
     else {
-        rest_payload = dequantize1D<uint8_t>(
-            readBinary<uint8_t>(result_dir / "f_rest.bin", rest_payload_values),
-            meta["f_rest"]["min"].asFloat(),
-            meta["f_rest"]["max"].asFloat());
+        if (attr_u16) {
+            rest_payload = dequantize1D<uint16_t>(
+                readBinary<uint16_t>(result_dir / "f_rest.bin", rest_payload_values),
+                meta["f_rest"]["min"].asFloat(),
+                meta["f_rest"]["max"].asFloat());
+        }
+        else {
+            rest_payload = dequantize1D<uint8_t>(
+                readBinary<uint8_t>(result_dir / "f_rest.bin", rest_payload_values),
+                meta["f_rest"]["min"].asFloat(),
+                meta["f_rest"]["max"].asFloat());
+        }
     }
 
     DecodedGaussianTensors decoded;
@@ -498,7 +784,12 @@ DecodedGaussianTensors GaussianCodec::load(
     decoded.xyz = xyz;
     decoded.features_dc = features_dc;
     decoded.features_rest = restoreRestPayload(rest_payload, sh_levels, num_points, max_sh_degree, device_type);
-    decoded.opacity = opacity;
+    if (opacity_representation == "activation") {
+        decoded.opacity = general_utils::inverse_sigmoid(torch::clamp(opacity, 1e-6f, 1.0f - 1e-6f));
+    }
+    else {
+        decoded.opacity = opacity;
+    }
     decoded.scaling = scaling;
     decoded.rotation = rotation;
     decoded.sh_levels = sh_levels;

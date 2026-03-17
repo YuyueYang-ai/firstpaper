@@ -27,6 +27,8 @@ GaussianScene::GaussianScene(
     bool shuffle,
     std::vector<float> resolution_scales)
 {
+    this->cameras_extent_ = 0.0f;
+    this->loaded_iter_ = 0;
     if (load_iteration)
     {
         this->loaded_iter_ = load_iteration;

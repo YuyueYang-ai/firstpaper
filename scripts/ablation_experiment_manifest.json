@@ -1,0 +1,34 @@
+[
+  {
+    "name": "office_baseline_30k_ablation",
+    "train_binary": "bin/train_egonerf_ricoh360",
+    "eval_binary": "bin/test_openmvg_lonlat",
+    "cfg_path": "cfg/lonlat/office_baseline_30k_formal.yaml",
+    "dataset_path": "data/office",
+    "result_dir": "results/ablation/office_baseline_30k"
+  },
+  {
+    "name": "office_prune_only_30k_ablation",
+    "train_binary": "bin/train_egonerf_ricoh360",
+    "eval_binary": "bin/test_openmvg_lonlat",
+    "cfg_path": "cfg/lonlat/office_prune_only_30k_ablation.yaml",
+    "dataset_path": "data/office",
+    "result_dir": "results/ablation/office_prune_only_30k"
+  },
+  {
+    "name": "office_prune_sh_30k_ablation",
+    "train_binary": "bin/train_egonerf_ricoh360",
+    "eval_binary": "bin/test_openmvg_lonlat",
+    "cfg_path": "cfg/lonlat/office_prune_sh_30k_ablation.yaml",
+    "dataset_path": "data/office",
+    "result_dir": "results/ablation/office_prune_sh_30k"
+  },
+  {
+    "name": "office_full_compact_30k_ablation",
+    "train_binary": "bin/train_egonerf_ricoh360",
+    "eval_binary": "bin/test_openmvg_lonlat",
+    "cfg_path": "cfg/lonlat/office_compact_30k_formal.yaml",
+    "dataset_path": "data/office",
+    "result_dir": "results/ablation/office_full_compact_30k"
+  }
+]

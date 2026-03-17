@@ -201,7 +201,7 @@ int main(int argc, char** argv)
                   << "Usage: " << argv[0]
                   << " path_to_gaussian_mapping_settings"    /*1*/
                   << " path_to_dataset_directory/"           /*2*/
-                  << " path_to_ply_flie_to_be_tested/"       /*3*/
+                  << " path_to_model_to_be_tested/"          /*3: ply or compact dir */
                   << " path_to_output_directory/"            /*4*/
                   << std::endl;
         return 1;
@@ -235,8 +235,8 @@ int main(int argc, char** argv)
     pGausMapper->setSensorType(MONOCULAR);
     pGausMapper->setDatasetSourcePath(argv[2]);
     readScene(pGausMapper);
-    std::filesystem::path result_ply_path(argv[3]);
-    pGausMapper->loadPly(result_ply_path);
+    std::filesystem::path result_model_path(argv[3]);
+    pGausMapper->loadResult(result_model_path);
 
     // Test and save results
     pGausMapper->renderAndRecordAllKeyframes("_test");
