@@ -26,12 +26,21 @@
 enum class CompressionMode
 {
     BASELINE = 0,
-    COMPACT = 1
+    COMPACT = 1,
+    COMPACT_PHASE2 = 2
 };
 
 inline const char* compressionModeName(CompressionMode mode)
 {
-    return mode == CompressionMode::COMPACT ? "compact" : "baseline";
+    switch (mode) {
+    case CompressionMode::BASELINE:
+        return "baseline";
+    case CompressionMode::COMPACT:
+        return "compact";
+    case CompressionMode::COMPACT_PHASE2:
+        return "compact_phase2";
+    }
+    return "baseline";
 }
 
 struct CompactExportOptions
@@ -57,6 +66,42 @@ struct CompactExportOptions
     int xyz_quant_bits = 16;
     int attribute_quant_bits = 8;
     int rotation_quant_bits = 16;
+};
+
+struct Phase2ResidualFieldOptions
+{
+    bool enable = false;
+    bool save_frozen_snapshot = false;
+    int freeze_topology_iter = -1;
+    bool sort_by_morton = true;
+    bool normalize_xyz = true;
+    bool mask_features_rest_by_sh_level = true;
+    bool use_locality_base = true;
+    int locality_high_sh_block_size = 64;
+    int locality_low_sh_block_size = 128;
+};
+
+struct Phase2ResidualFieldTrainOptions
+{
+    int num_fourier_frequencies = 6;
+    int hidden_dim = 128;
+    int num_hidden_layers = 3;
+    int batch_size = 8192;
+    int max_steps = 4000;
+    int log_interval = 200;
+    int eval_interval = 500;
+    float learning_rate = 1e-3f;
+    float weight_decay = 1e-6f;
+    bool include_features_dc = true;
+    bool include_opacity = true;
+    bool include_scaling = true;
+    bool include_rotation = true;
+    int block_embedding_dim = 8;
+    bool save_decoded_compact = true;
+    bool save_phase2_compact = true;
+    int decoded_xyz_quant_bits = 16;
+    int decoded_attribute_quant_bits = 16;
+    int decoded_rotation_quant_bits = 16;
 };
 
 struct DecodedGaussianTensors

@@ -230,6 +230,195 @@ EncodedRestPayload encodeRestPayload(
     return encoded;
 }
 
+torch::Tensor computeRestBlockBases(
+    const torch::Tensor& features_rest,
+    const torch::Tensor& sh_levels,
+    int max_sh_degree,
+    const CompactExportOptions& options)
+{
+    if (max_sh_degree <= 0 || !features_rest.defined() || features_rest.numel() == 0)
+        return torch::zeros({0}, features_rest.options());
+
+    auto rest_cpu = features_rest.detach().contiguous().to(torch::kCPU, torch::kFloat32);
+    auto levels_cpu = sh_levels.detach().contiguous().to(torch::kCPU, torch::kInt32);
+
+    const float* rest_ptr = rest_cpu.data_ptr<float>();
+    const std::int32_t* levels_ptr = levels_cpu.data_ptr<std::int32_t>();
+    const std::int64_t num_points = rest_cpu.size(0);
+    const std::int64_t rest_coeffs = rest_cpu.size(1);
+    const std::int64_t dims_per_point = rest_coeffs * 3;
+
+    std::size_t num_blocks = 0;
+    std::int64_t point_idx = 0;
+    while (point_idx < num_points) {
+        const int sh_level = std::clamp(static_cast<int>(levels_ptr[point_idx]), 0, max_sh_degree);
+        const std::size_t target_block_size = blockSizeForLevel(sh_level, max_sh_degree, options);
+
+        std::size_t block_points = 1;
+        while (point_idx + static_cast<std::int64_t>(block_points) < num_points
+               && block_points < target_block_size
+               && std::clamp(static_cast<int>(levels_ptr[point_idx + static_cast<std::int64_t>(block_points)]), 0, max_sh_degree) == sh_level) {
+            ++block_points;
+        }
+        ++num_blocks;
+        point_idx += static_cast<std::int64_t>(block_points);
+    }
+
+    auto block_bases_cpu = torch::zeros(
+        {static_cast<std::int64_t>(num_blocks), rest_coeffs, 3},
+        torch::TensorOptions().dtype(torch::kFloat32).device(torch::kCPU));
+    float* block_base_ptr = block_bases_cpu.data_ptr<float>();
+
+    std::size_t block_idx = 0;
+    std::int64_t point_offset = 0;
+    while (point_offset < num_points) {
+        const int sh_level = std::clamp(static_cast<int>(levels_ptr[point_offset]), 0, max_sh_degree);
+        const std::size_t payload_dims = restPayloadValuesForLevel(sh_level);
+        const std::size_t target_block_size = blockSizeForLevel(sh_level, max_sh_degree, options);
+
+        std::size_t block_points = 1;
+        while (point_offset + static_cast<std::int64_t>(block_points) < num_points
+               && block_points < target_block_size
+               && std::clamp(static_cast<int>(levels_ptr[point_offset + static_cast<std::int64_t>(block_points)]), 0, max_sh_degree) == sh_level) {
+            ++block_points;
+        }
+
+        if (payload_dims > 0) {
+            std::vector<float> base(payload_dims, 0.0f);
+            for (std::size_t local_idx = 0; local_idx < block_points; ++local_idx) {
+                const float* point_ptr =
+                    rest_ptr + ((point_offset + static_cast<std::int64_t>(local_idx)) * dims_per_point);
+                for (std::size_t dim = 0; dim < payload_dims; ++dim)
+                    base[dim] += point_ptr[dim];
+            }
+            for (float& value : base)
+                value /= static_cast<float>(block_points);
+
+            float* block_ptr = block_base_ptr + (static_cast<std::int64_t>(block_idx) * dims_per_point);
+            for (std::size_t dim = 0; dim < payload_dims; ++dim)
+                block_ptr[dim] = base[dim];
+        }
+
+        ++block_idx;
+        point_offset += static_cast<std::int64_t>(block_points);
+    }
+
+    return block_bases_cpu.to(features_rest.device());
+}
+
+torch::Tensor expandRestBlockBases(
+    const torch::Tensor& block_bases,
+    const torch::Tensor& sh_levels,
+    int max_sh_degree,
+    const CompactExportOptions& options)
+{
+    if (max_sh_degree <= 0 || !sh_levels.defined() || sh_levels.numel() == 0)
+        return torch::zeros({0}, torch::TensorOptions().dtype(torch::kFloat32).device(sh_levels.device()));
+    if (!block_bases.defined() || block_bases.numel() == 0)
+        throw std::runtime_error("Cannot expand empty locality block bases.");
+
+    auto levels_cpu = sh_levels.detach().contiguous().to(torch::kCPU, torch::kInt32);
+    auto block_bases_cpu = block_bases.detach().contiguous().to(torch::kCPU, torch::kFloat32);
+    const std::int32_t* levels_ptr = levels_cpu.data_ptr<std::int32_t>();
+    const float* block_base_ptr = block_bases_cpu.data_ptr<float>();
+
+    const std::int64_t num_points = levels_cpu.size(0);
+    const std::int64_t rest_coeffs = block_bases_cpu.size(1);
+    const std::int64_t dims_per_point = rest_coeffs * 3;
+
+    auto expanded_cpu = torch::zeros(
+        {num_points, rest_coeffs, 3},
+        torch::TensorOptions().dtype(torch::kFloat32).device(torch::kCPU));
+    float* expanded_ptr = expanded_cpu.data_ptr<float>();
+
+    std::size_t block_idx = 0;
+    std::int64_t point_idx = 0;
+    while (point_idx < num_points) {
+        const int sh_level = std::clamp(static_cast<int>(levels_ptr[point_idx]), 0, max_sh_degree);
+        const std::size_t payload_dims = restPayloadValuesForLevel(sh_level);
+        const std::size_t target_block_size = blockSizeForLevel(sh_level, max_sh_degree, options);
+
+        std::size_t block_points = 1;
+        while (point_idx + static_cast<std::int64_t>(block_points) < num_points
+               && block_points < target_block_size
+               && std::clamp(static_cast<int>(levels_ptr[point_idx + static_cast<std::int64_t>(block_points)]), 0, max_sh_degree) == sh_level) {
+            ++block_points;
+        }
+
+        if (block_idx >= static_cast<std::size_t>(block_bases_cpu.size(0)))
+            throw std::runtime_error("Locality block base tensor is truncated.");
+
+        if (payload_dims > 0) {
+            const float* block_ptr = block_base_ptr + (static_cast<std::int64_t>(block_idx) * dims_per_point);
+            for (std::size_t local_idx = 0; local_idx < block_points; ++local_idx) {
+                float* point_ptr = expanded_ptr + ((point_idx + static_cast<std::int64_t>(local_idx)) * dims_per_point);
+                for (std::size_t dim = 0; dim < payload_dims; ++dim)
+                    point_ptr[dim] = block_ptr[dim];
+            }
+        }
+
+        ++block_idx;
+        point_idx += static_cast<std::int64_t>(block_points);
+    }
+
+    if (block_idx != static_cast<std::size_t>(block_bases_cpu.size(0)))
+        throw std::runtime_error("Locality block base tensor has extra blocks beyond point layout.");
+
+    return expanded_cpu.to(block_bases.device());
+}
+
+torch::Tensor computeRestBlockIds(
+    const torch::Tensor& sh_levels,
+    int max_sh_degree,
+    const CompactExportOptions& options)
+{
+    if (!sh_levels.defined() || sh_levels.numel() == 0)
+        return torch::zeros({0}, torch::TensorOptions().dtype(torch::kLong).device(sh_levels.device()));
+
+    auto levels_cpu = sh_levels.detach().contiguous().to(torch::kCPU, torch::kInt32);
+    const std::int32_t* levels_ptr = levels_cpu.data_ptr<std::int32_t>();
+    const std::int64_t num_points = levels_cpu.size(0);
+
+    auto block_ids_cpu = torch::zeros(
+        {num_points},
+        torch::TensorOptions().dtype(torch::kLong).device(torch::kCPU));
+    auto* block_ids_ptr = block_ids_cpu.data_ptr<int64_t>();
+
+    int64_t block_idx = 0;
+    std::int64_t point_idx = 0;
+    while (point_idx < num_points) {
+        const int sh_level = std::clamp(static_cast<int>(levels_ptr[point_idx]), 0, max_sh_degree);
+        const std::size_t target_block_size = blockSizeForLevel(sh_level, max_sh_degree, options);
+
+        std::size_t block_points = 1;
+        while (point_idx + static_cast<std::int64_t>(block_points) < num_points
+               && block_points < target_block_size
+               && std::clamp(static_cast<int>(levels_ptr[point_idx + static_cast<std::int64_t>(block_points)]), 0, max_sh_degree) == sh_level) {
+            ++block_points;
+        }
+
+        for (std::size_t local_idx = 0; local_idx < block_points; ++local_idx)
+            block_ids_ptr[point_idx + static_cast<std::int64_t>(local_idx)] = block_idx;
+
+        ++block_idx;
+        point_idx += static_cast<std::int64_t>(block_points);
+    }
+
+    return block_ids_cpu.to(sh_levels.device());
+}
+
+torch::Tensor computeRestBlockBase(
+    const torch::Tensor& features_rest,
+    const torch::Tensor& sh_levels,
+    int max_sh_degree,
+    const CompactExportOptions& options)
+{
+    if (max_sh_degree <= 0 || !features_rest.defined() || features_rest.numel() == 0)
+        return torch::zeros_like(features_rest);
+    auto block_bases = computeRestBlockBases(features_rest, sh_levels, max_sh_degree, options);
+    return expandRestBlockBases(block_bases, sh_levels, max_sh_degree, options);
+}
+
 std::vector<float> decodeRestPayload(
     const EncodedRestPayload& encoded,
     const torch::Tensor& sh_levels,

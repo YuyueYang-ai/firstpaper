@@ -20,8 +20,12 @@
  */
 
 #include <cctype>
+#include <fstream>
+
+#include <json/json.h>
 
 #include "include/gaussian_mapper.h"
+#include "include/phase2_residual_field.h"
 
 namespace
 {
@@ -33,6 +37,19 @@ std::string toLowerAscii(std::string value)
         value.begin(),
         [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     return value;
+}
+
+std::string compactMetadataFormat(const std::filesystem::path& metadata_path)
+{
+    std::ifstream in(metadata_path);
+    if (!in.is_open())
+        throw std::runtime_error("Cannot open compact metadata at " + metadata_path.string());
+    Json::CharReaderBuilder builder;
+    Json::Value root;
+    std::string errs;
+    if (!Json::parseFromStream(builder, in, &root, &errs))
+        throw std::runtime_error("Cannot parse compact metadata at " + metadata_path.string() + ": " + errs);
+    return root.get("format", "").asString();
 }
 }
 
@@ -254,7 +271,7 @@ void GaussianMapper::readConfigFromFile(std::filesystem::path cfg_path)
     configureCompressionMode(
         parseCompressionMode(settings_file["Compression.mode"], has_legacy_compression_options));
 
-    if (!has_explicit_compression_mode || compression_mode_ == CompressionMode::COMPACT) {
+    if (!has_explicit_compression_mode || compression_mode_ != CompressionMode::BASELINE) {
         if (!settings_file["Compression.save_compact_snapshot"].empty())
             save_compact_snapshot_ = (settings_file["Compression.save_compact_snapshot"].operator int()) != 0;
         if (!settings_file["Compression.late_stage_prune_interval"].empty())
@@ -320,6 +337,31 @@ void GaussianMapper::readConfigFromFile(std::filesystem::path cfg_path)
     compact_export_options_.f_rest_locality_high_sh_block_size = f_rest_locality_high_sh_block_size_;
     compact_export_options_.f_rest_locality_low_sh_block_size = f_rest_locality_low_sh_block_size_;
     compact_export_options_.f_rest_locality_int4_rel_mse_threshold = f_rest_locality_int4_rel_mse_threshold_;
+    if (!settings_file["Phase2.enable"].empty())
+        phase2_options_.enable = (settings_file["Phase2.enable"].operator int()) != 0;
+    if (!settings_file["Phase2.save_frozen_snapshot"].empty())
+        phase2_options_.save_frozen_snapshot = (settings_file["Phase2.save_frozen_snapshot"].operator int()) != 0;
+    if (!settings_file["Phase2.freeze_topology_iter"].empty())
+        phase2_options_.freeze_topology_iter = settings_file["Phase2.freeze_topology_iter"].operator int();
+    if (!settings_file["Phase2.sort_by_morton"].empty())
+        phase2_options_.sort_by_morton = (settings_file["Phase2.sort_by_morton"].operator int()) != 0;
+    if (!settings_file["Phase2.normalize_xyz"].empty())
+        phase2_options_.normalize_xyz = (settings_file["Phase2.normalize_xyz"].operator int()) != 0;
+    if (!settings_file["Phase2.mask_features_rest_by_sh_level"].empty())
+        phase2_options_.mask_features_rest_by_sh_level =
+            (settings_file["Phase2.mask_features_rest_by_sh_level"].operator int()) != 0;
+    phase2_options_.locality_high_sh_block_size = f_rest_locality_high_sh_block_size_;
+    phase2_options_.locality_low_sh_block_size = f_rest_locality_low_sh_block_size_;
+    if (!settings_file["Phase2.use_locality_base"].empty())
+        phase2_options_.use_locality_base = (settings_file["Phase2.use_locality_base"].operator int()) != 0;
+    if (!settings_file["Phase2.locality_high_sh_block_size"].empty())
+        phase2_options_.locality_high_sh_block_size =
+            settings_file["Phase2.locality_high_sh_block_size"].operator int();
+    if (!settings_file["Phase2.locality_low_sh_block_size"].empty())
+        phase2_options_.locality_low_sh_block_size =
+            settings_file["Phase2.locality_low_sh_block_size"].operator int();
+    if (phase2_options_.freeze_topology_iter < 0)
+        phase2_options_.freeze_topology_iter = opt_params_.densify_until_iter_;
     std::cout << "[Gaussian Mapper]Compression mode: " << compressionModeName(compression_mode_) << std::endl;
     if (compact_export_options_.enable_sh_bandwidth) {
         std::cout << "[Gaussian Mapper]Export SH bandwidth: keep_ratio=" << compact_export_options_.sh_energy_keep_ratio
@@ -337,6 +379,18 @@ void GaussianMapper::readConfigFromFile(std::filesystem::path cfg_path)
                   << compact_export_options_.f_rest_locality_high_sh_block_size
                   << " low_sh_block_size=" << compact_export_options_.f_rest_locality_low_sh_block_size
                   << " int4_rel_mse_threshold=" << compact_export_options_.f_rest_locality_int4_rel_mse_threshold
+                  << std::endl;
+    }
+    if (phase2_options_.enable) {
+        std::cout << "[Gaussian Mapper]Phase 2 residual field prep: freeze_iter="
+                  << phase2_options_.freeze_topology_iter
+                  << " save_snapshot=" << (phase2_options_.save_frozen_snapshot ? "true" : "false")
+                  << " sort_by_morton=" << (phase2_options_.sort_by_morton ? "true" : "false")
+                  << " normalize_xyz=" << (phase2_options_.normalize_xyz ? "true" : "false")
+                  << " mask_f_rest=" << (phase2_options_.mask_features_rest_by_sh_level ? "true" : "false")
+                  << " locality_base=" << (phase2_options_.use_locality_base ? "true" : "false")
+                  << " high_block=" << phase2_options_.locality_high_sh_block_size
+                  << " low_block=" << phase2_options_.locality_low_sh_block_size
                   << std::endl;
     }
 
@@ -543,6 +597,18 @@ void GaussianMapper::trainForOneIteration()
         torch::NoGradGuard no_grad;
         ema_loss_for_log_ = 0.4f * loss.item().toFloat() + 0.6 * ema_loss_for_log_;
 
+        if (phase2_options_.enable
+            && !phase2_topology_frozen_
+            && getIteration() >= phase2_options_.freeze_topology_iter) {
+            phase2_topology_frozen_ = true;
+            late_stage_prune_interval_ = 0;
+            adaptive_sh_bandwidth_interval_ = 0;
+            std::cout << "[Gaussian Mapper]Phase 2 topology frozen at iteration "
+                      << getIteration() << std::endl;
+            if (phase2_options_.save_frozen_snapshot)
+                savePhase2FrozenPackage(result_dir_ / std::to_string(getIteration()));
+        }
+
         if (keyframe_record_interval_ &&
             getIteration() % keyframe_record_interval_ == 0)
             recordKeyframeRendered(masked_image, gt_image, viewpoint_cam->fid_, result_dir_, result_dir_, result_dir_);
@@ -654,6 +720,8 @@ void GaussianMapper::configureCompressionMode(CompressionMode mode)
     f_rest_locality_high_sh_block_size_ = 64;
     f_rest_locality_low_sh_block_size_ = 128;
     f_rest_locality_int4_rel_mse_threshold_ = 0.02f;
+    phase2_options_ = Phase2ResidualFieldOptions();
+    phase2_topology_frozen_ = false;
 
     compact_export_options_ = CompactExportOptions();
     compact_export_options_.prune_min_opacity = late_stage_prune_min_opacity_;
@@ -669,10 +737,29 @@ void GaussianMapper::configureCompressionMode(CompressionMode mode)
     compact_export_options_.f_rest_locality_low_sh_block_size = f_rest_locality_low_sh_block_size_;
     compact_export_options_.f_rest_locality_int4_rel_mse_threshold = f_rest_locality_int4_rel_mse_threshold_;
 
-    if (mode == CompressionMode::COMPACT) {
+    if (mode == CompressionMode::COMPACT || mode == CompressionMode::COMPACT_PHASE2) {
         save_compact_snapshot_ = true;
         late_stage_prune_interval_ = 1000;
         adaptive_sh_bandwidth_interval_ = 500;
+        compact_export_options_.enable_export_prune = true;
+        compact_export_options_.enable_sh_bandwidth = true;
+        compact_export_options_.sort_by_morton = true;
+        if (mode == CompressionMode::COMPACT_PHASE2) {
+            f_rest_locality_codec_ = true;
+            compact_export_options_.f_rest_locality_codec = true;
+            compact_export_options_.f_rest_locality_high_sh_block_size = f_rest_locality_high_sh_block_size_;
+            compact_export_options_.f_rest_locality_low_sh_block_size = f_rest_locality_low_sh_block_size_;
+            compact_export_options_.f_rest_locality_int4_rel_mse_threshold =
+                f_rest_locality_int4_rel_mse_threshold_;
+            phase2_options_.enable = true;
+            phase2_options_.save_frozen_snapshot = true;
+            phase2_options_.sort_by_morton = true;
+            phase2_options_.normalize_xyz = true;
+            phase2_options_.mask_features_rest_by_sh_level = true;
+            phase2_options_.use_locality_base = true;
+            phase2_options_.locality_high_sh_block_size = f_rest_locality_high_sh_block_size_;
+            phase2_options_.locality_low_sh_block_size = f_rest_locality_low_sh_block_size_;
+        }
         return;
     }
 
@@ -699,6 +786,8 @@ CompressionMode GaussianMapper::parseCompressionMode(
             return CompressionMode::BASELINE;
         if (mode_value == 1)
             return CompressionMode::COMPACT;
+        if (mode_value == 2)
+            return CompressionMode::COMPACT_PHASE2;
     }
 
     const std::string mode_value = toLowerAscii(mode_node.string());
@@ -706,6 +795,8 @@ CompressionMode GaussianMapper::parseCompressionMode(
         return CompressionMode::BASELINE;
     if (mode_value == "compact" || mode_value == "compressed" || mode_value == "1")
         return CompressionMode::COMPACT;
+    if (mode_value == "compact_phase2" || mode_value == "compact-phase2" || mode_value == "phase2" || mode_value == "2")
+        return CompressionMode::COMPACT_PHASE2;
 
     throw std::runtime_error("Unsupported Compression.mode: " + mode_node.string());
 }
@@ -1094,6 +1185,8 @@ void GaussianMapper::savePly(std::filesystem::path result_dir)
 
     if (save_compact_snapshot_)
         saveCompact(result_dir);
+    if (phase2_options_.enable && phase2_topology_frozen_ && phase2_options_.save_frozen_snapshot)
+        savePhase2FrozenPackage(result_dir);
 }
 
 void GaussianMapper::saveCompact(std::filesystem::path result_dir)
@@ -1111,6 +1204,39 @@ void GaussianMapper::saveCompact(std::filesystem::path result_dir)
         export_options.enable_export_prune = false;
 
     gaussians_->saveCompact(compact_dir, scene_->cameras_extent_, export_options);
+}
+
+void GaussianMapper::savePhase2FrozenPackage(std::filesystem::path result_dir)
+{
+    CHECK_DIRECTORY_AND_CREATE_IF_NOT_EXISTS(result_dir)
+
+    std::filesystem::path phase2_dir = result_dir / "phase2";
+    CHECK_DIRECTORY_AND_CREATE_IF_NOT_EXISTS(phase2_dir)
+
+    phase2_dir = phase2_dir / ("iteration_" + std::to_string(getIteration()));
+    CHECK_DIRECTORY_AND_CREATE_IF_NOT_EXISTS(phase2_dir)
+
+    DecodedGaussianTensors decoded;
+    decoded.max_sh_degree = gaussians_->max_sh_degree_;
+    decoded.active_sh_degree = gaussians_->active_sh_degree_;
+    decoded.xyz = gaussians_->xyz_.detach();
+    decoded.features_dc = gaussians_->features_dc_.detach();
+    decoded.features_rest = gaussians_->features_rest_.detach();
+    decoded.opacity = gaussians_->opacity_.detach();
+    decoded.scaling = gaussians_->scaling_.detach();
+    decoded.rotation = gaussians_->rotation_.detach();
+    decoded.sh_levels = (gaussians_->sh_levels_.defined() && gaussians_->sh_levels_.numel() != 0)
+                            ? gaussians_->sh_levels_.detach()
+                            : torch::full(
+                                  {gaussians_->xyz_.size(0)},
+                                  gaussians_->max_sh_degree_,
+                                  torch::TensorOptions().dtype(torch::kInt32).device(gaussians_->xyz_.device()));
+
+    phase2_residual_field::saveFrozenPackage(
+        decoded,
+        phase2_dir,
+        scene_->cameras_extent_,
+        phase2_options_);
 }
 
 void GaussianMapper::keyframesToJson(std::filesystem::path result_dir)
@@ -1434,10 +1560,18 @@ void GaussianMapper::loadCompact(std::filesystem::path compact_path, std::filesy
 {
     if (compact_path.filename() == "metadata.json")
         compact_path = compact_path.parent_path();
-    if (!std::filesystem::exists(compact_path / "metadata.json"))
-        throw std::runtime_error("Cannot find compact metadata at " + (compact_path / "metadata.json").string());
+    const auto metadata_path = compact_path / "metadata.json";
+    if (!std::filesystem::exists(metadata_path))
+        throw std::runtime_error("Cannot find compact metadata at " + metadata_path.string());
 
-    this->gaussians_->loadCompact(compact_path);
+    const auto format = compactMetadataFormat(metadata_path);
+    if (format == "phase2_residual_field_compact") {
+        auto decoded = phase2_residual_field::loadPhase2Compact(compact_path, device_type_);
+        this->gaussians_->loadCompactDecoded(decoded);
+    }
+    else {
+        this->gaussians_->loadCompact(compact_path);
+    }
     loadCamera(camera_path);
 
     // Ready

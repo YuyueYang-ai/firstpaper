@@ -3,6 +3,7 @@
 import argparse
 import csv
 import json
+import struct
 from pathlib import Path
 
 
@@ -38,11 +39,18 @@ def path_size(path: Path):
     return sum(item.stat().st_size for item in path.rglob("*") if item.is_file())
 
 
-def read_sh_levels(compact_dir: Path):
+def read_sh_levels(compact_dir: Path, num_points: int):
     path = compact_dir / "sh_levels.bin"
     if not path.exists():
         return []
-    return list(path.read_bytes())
+    raw = path.read_bytes()
+    if num_points <= 0:
+        return []
+    if len(raw) == num_points:
+        return list(raw)
+    if len(raw) == num_points * 4:
+        return [value[0] for value in struct.iter_unpack("<i", raw)]
+    return []
 
 
 def format_cell(value):
@@ -97,28 +105,42 @@ def analyze_entry(entry):
     compact_dir = Path(entry["compact_dir"]).expanduser().resolve()
     eval_dir = Path(entry["eval_dir"]).expanduser().resolve() if entry.get("eval_dir") else None
     meta = json.loads((compact_dir / "metadata.json").read_text())
+    meta_format = meta.get("format", "")
 
     num_points = int(meta["num_points"])
     max_sh_degree = int(meta["max_sh_degree"])
     active_sh_degree = int(meta["active_sh_degree"])
-    rest_payload_values = int(meta["rest_payload_values"])
+    sh_levels = read_sh_levels(compact_dir, num_points)
+    if meta_format == "phase2_residual_field_compact":
+        rest_payload_values = sum(max(0, ((level + 1) * (level + 1) - 1) * 3) for level in sh_levels)
+    else:
+        rest_payload_values = int(meta["rest_payload_values"])
     max_rest_payload_values = num_points * (((max_sh_degree + 1) * (max_sh_degree + 1)) - 1) * 3
     rest_payload_ratio = (rest_payload_values / max_rest_payload_values) if max_rest_payload_values else None
-    f_rest_meta = meta.get("f_rest", {})
-    f_rest_representation = f_rest_meta.get("representation", "direct_payload")
-    f_rest_quantization_mode = f_rest_meta.get("quantization_mode", "global_1d")
-    f_rest_block_size_points = f_rest_meta.get("block_size_points")
-    f_rest_block_count = f_rest_meta.get("block_count")
-    f_rest_high_sh_block_size_points = f_rest_meta.get("high_sh_block_size_points")
-    f_rest_low_sh_block_size_points = f_rest_meta.get("low_sh_block_size_points")
-    f_rest_int4_block_count = f_rest_meta.get("int4_block_count")
-    f_rest_int8_block_count = f_rest_meta.get("int8_block_count")
+    if meta_format == "phase2_residual_field_compact":
+        f_rest_representation = meta.get("representation", "anchors_plus_field_weights")
+        f_rest_quantization_mode = "block_base_fp16+field_weights"
+        f_rest_block_size_points = None
+        f_rest_block_count = meta.get("features_rest_block_bases_shape", [0])[0]
+        f_rest_high_sh_block_size_points = meta.get("locality_high_sh_block_size")
+        f_rest_low_sh_block_size_points = meta.get("locality_low_sh_block_size")
+        f_rest_int4_block_count = None
+        f_rest_int8_block_count = None
+    else:
+        f_rest_meta = meta.get("f_rest", {})
+        f_rest_representation = f_rest_meta.get("representation", "direct_payload")
+        f_rest_quantization_mode = f_rest_meta.get("quantization_mode", "global_1d")
+        f_rest_block_size_points = f_rest_meta.get("block_size_points")
+        f_rest_block_count = f_rest_meta.get("block_count")
+        f_rest_high_sh_block_size_points = f_rest_meta.get("high_sh_block_size_points")
+        f_rest_low_sh_block_size_points = f_rest_meta.get("low_sh_block_size_points")
+        f_rest_int4_block_count = f_rest_meta.get("int4_block_count")
+        f_rest_int8_block_count = f_rest_meta.get("int8_block_count")
     if f_rest_int4_block_count is not None and f_rest_block_count:
         f_rest_int4_block_ratio = f_rest_int4_block_count / f_rest_block_count
     else:
         f_rest_int4_block_ratio = None
 
-    sh_levels = read_sh_levels(compact_dir)
     counts = [0] * (max_sh_degree + 1)
     for level in sh_levels:
         if 0 <= level <= max_sh_degree:
@@ -132,7 +154,9 @@ def analyze_entry(entry):
     for name in [
         "xyz.bin",
         "f_dc.bin",
+        "features_dc.bin",
         "f_rest.bin",
+        "features_rest_block_bases.bin",
         "f_rest_block_mins.bin",
         "f_rest_block_maxs.bin",
         "f_rest_block_levels.bin",
@@ -144,6 +168,8 @@ def analyze_entry(entry):
         "scaling.bin",
         "rotation.bin",
         "sh_levels.bin",
+        "xyz_normalized.bin",
+        "field_weights.pt",
         "metadata.json",
     ]:
         file_sizes[name] = path_size(compact_dir / name)
@@ -180,29 +206,31 @@ def analyze_entry(entry):
         "f_rest_int4_block_ratio": round_or_none(f_rest_int4_block_ratio),
         "compact_bytes": compact_bytes,
         "xyz_bytes": file_sizes["xyz.bin"],
-        "f_dc_bytes": file_sizes["f_dc.bin"],
+        "f_dc_bytes": max(file_sizes["f_dc.bin"], file_sizes["features_dc.bin"]),
         "f_rest_bytes": file_sizes["f_rest.bin"],
         "f_rest_block_mins_bytes": file_sizes["f_rest_block_mins.bin"],
         "f_rest_block_maxs_bytes": file_sizes["f_rest_block_maxs.bin"],
         "f_rest_block_levels_bytes": file_sizes["f_rest_block_levels.bin"],
         "f_rest_block_point_counts_bytes": file_sizes["f_rest_block_point_counts.bin"],
         "f_rest_block_bits_bytes": file_sizes["f_rest_block_bits.bin"],
-        "f_rest_block_base_bytes": file_sizes["f_rest_block_base.bin"],
+        "f_rest_block_base_bytes": max(file_sizes["f_rest_block_base.bin"], file_sizes["features_rest_block_bases.bin"]),
         "f_rest_block_scale_bytes": file_sizes["f_rest_block_scale.bin"],
         "opacity_bytes": file_sizes["opacity.bin"],
         "scaling_bytes": file_sizes["scaling.bin"],
         "rotation_bytes": file_sizes["rotation.bin"],
         "sh_levels_bytes": file_sizes["sh_levels.bin"],
+        "xyz_normalized_bytes": file_sizes["xyz_normalized.bin"],
+        "field_weights_bytes": file_sizes["field_weights.pt"],
         "metadata_bytes": file_sizes["metadata.json"],
         "xyz_share": round_or_none(share("xyz.bin")),
-        "f_dc_share": round_or_none(share("f_dc.bin")),
+        "f_dc_share": round_or_none(max(file_sizes["f_dc.bin"], file_sizes["features_dc.bin"]) / compact_bytes if compact_bytes else None),
         "f_rest_share": round_or_none(share("f_rest.bin")),
         "f_rest_block_mins_share": round_or_none(share("f_rest_block_mins.bin")),
         "f_rest_block_maxs_share": round_or_none(share("f_rest_block_maxs.bin")),
         "f_rest_block_levels_share": round_or_none(share("f_rest_block_levels.bin")),
         "f_rest_block_point_counts_share": round_or_none(share("f_rest_block_point_counts.bin")),
         "f_rest_block_bits_share": round_or_none(share("f_rest_block_bits.bin")),
-        "f_rest_block_base_share": round_or_none(share("f_rest_block_base.bin")),
+        "f_rest_block_base_share": round_or_none(max(file_sizes["f_rest_block_base.bin"], file_sizes["features_rest_block_bases.bin"]) / compact_bytes if compact_bytes else None),
         "f_rest_block_scale_share": round_or_none(share("f_rest_block_scale.bin")),
         "opacity_share": round_or_none(share("opacity.bin")),
         "scaling_share": round_or_none(share("scaling.bin")),

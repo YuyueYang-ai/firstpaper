@@ -18,6 +18,16 @@
     "export_compact_variants": true
   },
   {
+    "name": "office_compact_phase2_30k",
+    "train_binary": "bin/train_egonerf_ricoh360",
+    "eval_binary": "bin/test_openmvg_lonlat",
+    "cfg_path": "cfg/lonlat/office_compact_phase2_30k_formal.yaml",
+    "dataset_path": "data/office",
+    "result_dir": "results/formal_compare/office_compact_phase2_30k",
+    "export_compact_variants": true,
+    "run_phase2_field": true
+  },
+  {
     "name": "turtlebot_pyebaekRoom_1_scene_1_baseline_32000",
     "train_binary": "bin/train_egonerf_ricoh360",
     "eval_binary": "bin/test_openmvg_lonlat",
@@ -34,5 +44,15 @@
     "dataset_path": "data/OmniScenes/turtlebot_pyebaekRoom_1_scene_1",
     "result_dir": "results/formal_compare/turtlebot_pyebaekRoom_1_scene_1_compact_32000",
     "export_compact_variants": true
+  },
+  {
+    "name": "turtlebot_pyebaekRoom_1_scene_1_compact_phase2_32000",
+    "train_binary": "bin/train_egonerf_ricoh360",
+    "eval_binary": "bin/test_openmvg_lonlat",
+    "cfg_path": "cfg/lonlat/omniscenes_turtlebot_pyebaekRoom_compact_phase2_32000_formal.yaml",
+    "dataset_path": "data/OmniScenes/turtlebot_pyebaekRoom_1_scene_1",
+    "result_dir": "results/formal_compare/turtlebot_pyebaekRoom_1_scene_1_compact_phase2_32000",
+    "export_compact_variants": true,
+    "run_phase2_field": true
   }
 ]

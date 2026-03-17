@@ -1,0 +1,12 @@
+[
+  {
+    "label": "office_phase2_smoke_phase2_decoded_compact",
+    "scene": "office",
+    "variant": "phase2_decoded_compact",
+    "train_root": "results_smoke/office_phase2_field_smoke_v3",
+    "model_path": "results_smoke/office_phase2_field_smoke_v3/decoded_compact/iteration_0",
+    "ply_path": "results/formal_compare/office_compact_30k/30081_shutdown/ply/point_cloud/iteration_30081/point_cloud.ply",
+    "compact_dir": "results_smoke/office_phase2_field_smoke_v3/decoded_compact/iteration_0",
+    "eval_dir": "results_smoke/office_phase2_field_smoke_v3_eval4/0_test"
+  }
+]

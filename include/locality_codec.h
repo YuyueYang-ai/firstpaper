@@ -56,6 +56,29 @@ EncodedRestPayload encodeRestPayload(
     int max_sh_degree,
     const CompactExportOptions& options);
 
+torch::Tensor computeRestBlockBase(
+    const torch::Tensor& features_rest,
+    const torch::Tensor& sh_levels,
+    int max_sh_degree,
+    const CompactExportOptions& options);
+
+torch::Tensor computeRestBlockBases(
+    const torch::Tensor& features_rest,
+    const torch::Tensor& sh_levels,
+    int max_sh_degree,
+    const CompactExportOptions& options);
+
+torch::Tensor expandRestBlockBases(
+    const torch::Tensor& block_bases,
+    const torch::Tensor& sh_levels,
+    int max_sh_degree,
+    const CompactExportOptions& options);
+
+torch::Tensor computeRestBlockIds(
+    const torch::Tensor& sh_levels,
+    int max_sh_degree,
+    const CompactExportOptions& options);
+
 std::vector<float> decodeRestPayload(
     const EncodedRestPayload& encoded,
     const torch::Tensor& sh_levels,

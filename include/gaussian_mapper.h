@@ -165,9 +165,11 @@ public:
     void setDatasetSourcePath(std::filesystem::path dataset_path) { this->model_params_.source_path_ = dataset_path; }
     void setSensorType(SystemSensorType sensor_type) { this->sensor_type_ = sensor_type; }
     CompressionMode compressionMode() const { return compression_mode_; }
-    bool isCompactMode() const { return compression_mode_ == CompressionMode::COMPACT; }
+    bool isCompactMode() const { return compression_mode_ != CompressionMode::BASELINE; }
+    bool isPhase2Mode() const { return compression_mode_ == CompressionMode::COMPACT_PHASE2; }
 
     void exportCompact(std::filesystem::path result_dir) { saveCompact(result_dir); }
+    void exportPhase2FrozenPackage(std::filesystem::path result_dir) { savePhase2FrozenPackage(result_dir); }
     void loadPly(std::filesystem::path ply_path, std::filesystem::path camera_path = "");
     void loadCompact(std::filesystem::path compact_path, std::filesystem::path camera_path = "");
     void loadResult(std::filesystem::path result_path, std::filesystem::path camera_path = "");
@@ -208,6 +210,7 @@ protected:
 
     void savePly(std::filesystem::path result_dir);
     void saveCompact(std::filesystem::path result_dir);
+    void savePhase2FrozenPackage(std::filesystem::path result_dir);
     void keyframesToJson(std::filesystem::path result_dir);
     void saveModelParams(std::filesystem::path result_dir);
     void writeKeyframeUsedTimes(std::filesystem::path result_dir, std::string name_suffix = "");
@@ -337,6 +340,8 @@ protected:
 
     bool save_compact_snapshot_ = false;
     CompactExportOptions compact_export_options_;
+    Phase2ResidualFieldOptions phase2_options_;
+    bool phase2_topology_frozen_ = false;
 
     bool prune_by_extent_ = true;
 

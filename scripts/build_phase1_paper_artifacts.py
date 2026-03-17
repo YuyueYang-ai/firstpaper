@@ -86,17 +86,22 @@ def build_main_table(phase1_rows):
         ("baseline_ply", "OmniGS baseline", "ply"),
         ("compact_train_ply", "Ours train-time compact", "ply"),
         ("locality_residual", "Ours final compact", "compact"),
+        ("phase2_residual_field", "Ours phase-2 residual field", "compact"),
     ]
 
     output_rows = []
     for scene in sorted(grouped):
         scene_rows = grouped[scene]
+        if "baseline_ply" not in scene_rows:
+            continue
         baseline = scene_rows["baseline_ply"]
         baseline_points = as_int(baseline, "num_points")
         baseline_bytes = as_int(baseline, "ply_bytes")
         baseline_psnr = as_float(baseline, "avg_psnr")
 
         for method, display_name, fmt in method_specs:
+            if method not in scene_rows:
+                continue
             row = scene_rows[method]
             current_points = as_int(row, "num_points")
             current_bytes = choose_model_bytes(row)
@@ -164,24 +169,37 @@ def build_ablation_table(ablation_rows):
 
 
 def build_takeaways(main_rows, breakdown_rows, ablation_rows):
+    def delta_phrase(current, reference, unit, lower_is_better=False):
+        delta = current - reference
+        magnitude = abs(delta)
+        if magnitude < 1e-9:
+            return f"keeps {unit} unchanged"
+        if lower_is_better:
+            verb = "improves" if delta < 0 else "worsens"
+        else:
+            verb = "improves" if delta > 0 else "drops"
+        return f"{verb} {unit} by {magnitude:.3f}"
+
     def find_main(scene, setting):
         for row in main_rows:
             if row["scene"] == scene and row["setting"] == setting:
                 return row
-        raise KeyError((scene, setting))
+        return None
 
     def find_breakdown(label_suffix):
         for row in breakdown_rows:
             if row["label"].endswith(label_suffix):
                 return row
-        raise KeyError(label_suffix)
+        return None
 
     office_baseline = find_main("office", "OmniGS baseline")
     office_train = find_main("office", "Ours train-time compact")
     office_final = find_main("office", "Ours final compact")
+    office_phase2 = find_main("office", "Ours phase-2 residual field")
     turtle_baseline = find_main("turtlebot_pyebaekRoom_1_scene_1", "OmniGS baseline")
     turtle_train = find_main("turtlebot_pyebaekRoom_1_scene_1", "Ours train-time compact")
     turtle_final = find_main("turtlebot_pyebaekRoom_1_scene_1", "Ours final compact")
+    turtle_phase2 = find_main("turtlebot_pyebaekRoom_1_scene_1", "Ours phase-2 residual field")
 
     office_fixed = find_breakdown("office_compact_30k_compact_fixed")
     office_locality = find_breakdown("office_compact_30k_compact_locality_residual")
@@ -189,7 +207,8 @@ def build_takeaways(main_rows, breakdown_rows, ablation_rows):
     turtle_locality = find_breakdown("turtlebot_pyebaekRoom_1_scene_1_compact_32000_compact_locality_residual")
 
     lines = []
-    lines.append("# Phase-1 Paper Takeaways")
+    title = "# Compact GS Paper Takeaways" if (office_phase2 or turtle_phase2) else "# Phase-1 Paper Takeaways"
+    lines.append(title)
     lines.append("")
     lines.append("## Main Result")
     lines.append(
@@ -219,6 +238,21 @@ def build_takeaways(main_rows, breakdown_rows, ablation_rows):
         f"{100.0 * as_float(office_locality, 'f_rest_int4_block_ratio'):.1f}% on `office` and "
         f"{100.0 * as_float(turtle_locality, 'f_rest_int4_block_ratio'):.1f}% on `turtlebot_pyebaekRoom_1_scene_1`."
     )
+    if office_phase2 or turtle_phase2:
+        lines.append("")
+        lines.append("## Phase 2 Readout")
+        if office_phase2 and office_final:
+            lines.append(
+                f"- On `office`, the phase-2 residual field changes model size from {office_final['model_mb']:.2f} MB "
+                f"to {office_phase2['model_mb']:.2f} MB and {delta_phrase(office_phase2['psnr'], office_final['psnr'], 'PSNR')} "
+                f"relative to the phase-1 final compact."
+            )
+        if turtle_phase2 and turtle_final:
+            lines.append(
+                f"- On `turtlebot_pyebaekRoom_1_scene_1`, the phase-2 residual field changes model size from "
+                f"{turtle_final['model_mb']:.2f} MB to {turtle_phase2['model_mb']:.2f} MB and "
+                f"{delta_phrase(turtle_phase2['psnr'], turtle_final['psnr'], 'PSNR')} relative to the phase-1 final compact."
+            )
     lines.append("")
     lines.append("## Ablation Readout")
     ablation_map = {row["variant"]: row for row in ablation_rows}
@@ -243,6 +277,8 @@ def build_takeaways(main_rows, breakdown_rows, ablation_rows):
     lines.append("- Use `OmniGS baseline`, `Ours train-time compact`, and `Ours final compact` as the main table rows.")
     lines.append("- Put `export_shdrop` into supplementary material unless you want an explicit intermediate codec ablation.")
     lines.append("- Keep the ablation focused on `pruning`, `adaptive SH`, and `locality residual codec`.")
+    if office_phase2 or turtle_phase2:
+        lines.append("- Present `Ours phase-2 residual field` as the second-stage extension row, not as the core Phase-1 method.")
     return "\n".join(lines) + "\n"
 
 

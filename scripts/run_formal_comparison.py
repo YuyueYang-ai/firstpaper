@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import traceback
@@ -16,6 +17,8 @@ DEFAULT_MARKDOWN_OUTPUT = ROOT / "results_smoke/formal_compare_summary.md"
 DEFAULT_COMPACT_ANALYSIS_OUTPUT = ROOT / "results_smoke/formal_compare_compact_breakdown.csv"
 DEFAULT_COMPACT_ANALYSIS_MARKDOWN_OUTPUT = ROOT / "results_smoke/formal_compare_compact_breakdown.md"
 DEFAULT_EXPORT_BINARY = ROOT / "bin/export_compact"
+DEFAULT_PREPARE_PHASE2_BINARY = ROOT / "bin/prepare_phase2"
+DEFAULT_TRAIN_PHASE2_BINARY = ROOT / "bin/train_phase2_residual_field"
 DEFAULT_FIXED_EXPORT_CFG = ROOT / "cfg/lonlat/compact_export_fixed.yaml"
 DEFAULT_SHDROP_EXPORT_CFG = ROOT / "cfg/lonlat/compact_export_shdrop_aggressive.yaml"
 DEFAULT_LOCALITY_EXPORT_CFG = ROOT / "cfg/lonlat/compact_export_locality_residual.yaml"
@@ -51,6 +54,43 @@ def latest_ply(result_dir: Path):
     if not ply_paths:
         raise RuntimeError(f"no checkpoints found under {result_dir}")
     return ply_paths[-1]
+
+
+def latest_iteration_dir(root_dir: Path):
+    iteration_dirs = sorted(
+        [path for path in root_dir.glob("iteration_*") if path.is_dir()],
+        key=lambda path: int(path.name.split("_")[-1]) if path.name.split("_")[-1].isdigit() else -1,
+    )
+    if not iteration_dirs:
+        raise RuntimeError(f"no iteration directories found under {root_dir}")
+    return iteration_dirs[-1]
+
+
+def resolve_phase2_frozen_dir(checkpoint_dir: Path, expected_iteration_name: str):
+    candidates = [
+        checkpoint_dir / "ply/phase2" / expected_iteration_name,
+        checkpoint_dir / "phase2" / expected_iteration_name,
+        checkpoint_dir / "ply/phase2" / "iteration_0",
+        checkpoint_dir / "phase2" / "iteration_0",
+    ]
+    for candidate in candidates:
+        if (candidate / "metadata.json").exists():
+            return candidate
+
+    roots = [
+        checkpoint_dir / "ply/phase2",
+        checkpoint_dir / "phase2",
+    ]
+    for root in roots:
+        if root.exists():
+            try:
+                candidate = latest_iteration_dir(root)
+            except RuntimeError:
+                continue
+            if (candidate / "metadata.json").exists():
+                return candidate
+
+    raise RuntimeError(f"no valid phase2 frozen package found under {checkpoint_dir}")
 
 
 def reexport_fixed(cfg_path: Path, result_dir: Path, env, force: bool):
@@ -137,6 +177,35 @@ def experiment_entries(exp, result_dir: Path):
                 "eval_dir": str(result_dir / f"{checkpoint_name}_eval_compact_locality_residual/0_test"),
             }
         )
+    phase2_field_dir = checkpoint_dir / "phase2_field" / iteration_name
+    phase2_compact_dir = phase2_field_dir / "phase2_compact" / "iteration_0"
+    phase2_decoded_dir = phase2_field_dir / "decoded_compact" / "iteration_0"
+    if phase2_compact_dir.exists():
+        rows.append(
+            {
+                "label": f"{exp['name']}_phase2_compact",
+                "scene": exp["name"],
+                "variant": "phase2_compact",
+                "train_root": str(result_dir),
+                "model_path": str(phase2_compact_dir),
+                "ply_path": str(ply_path),
+                "compact_dir": str(phase2_compact_dir),
+                "eval_dir": str(result_dir / f"{checkpoint_name}_eval_phase2_compact/0_test"),
+            }
+        )
+    elif phase2_decoded_dir.exists():
+        rows.append(
+            {
+                "label": f"{exp['name']}_phase2_decoded_compact",
+                "scene": exp["name"],
+                "variant": "phase2_decoded_compact",
+                "train_root": str(result_dir),
+                "model_path": str(phase2_decoded_dir),
+                "ply_path": str(ply_path),
+                "compact_dir": str(phase2_decoded_dir),
+                "eval_dir": str(result_dir / f"{checkpoint_name}_eval_phase2_decoded_compact/0_test"),
+            }
+        )
     return rows
 
 
@@ -198,6 +267,8 @@ def run_one(exp, env, force_reexport, skip_existing):
     result_dir = (ROOT / exp["result_dir"]).resolve()
     result_dir.parent.mkdir(parents=True, exist_ok=True)
     export_binary = DEFAULT_EXPORT_BINARY.resolve()
+    prepare_phase2_binary = DEFAULT_PREPARE_PHASE2_BINARY.resolve()
+    train_phase2_binary = Path(exp.get("phase2_binary", DEFAULT_TRAIN_PHASE2_BINARY)).resolve()
 
     if not skip_existing:
         train_cmd = [
@@ -306,6 +377,57 @@ def run_one(exp, env, force_reexport, skip_existing):
                     cwd=ROOT,
                     env=env,
                 )
+
+    if exp.get("run_phase2_field", False):
+        frozen_root = checkpoint_dir / "ply/phase2"
+        if force_reexport and frozen_root.exists():
+            shutil.rmtree(frozen_root, ignore_errors=True)
+        try:
+            frozen_dir = resolve_phase2_frozen_dir(checkpoint_dir, iteration_name)
+        except RuntimeError:
+            frozen_dir = None
+        if force_reexport or frozen_dir is None:
+            subprocess.run(
+                [str(prepare_phase2_binary), str(cfg_path), str(ply_path), str(checkpoint_dir / "ply")],
+                check=True,
+                cwd=ROOT,
+                env=env,
+            )
+            frozen_dir = resolve_phase2_frozen_dir(checkpoint_dir, iteration_name)
+
+        phase2_output_dir = checkpoint_dir / "phase2_field" / iteration_name
+        if force_reexport and phase2_output_dir.exists():
+            shutil.rmtree(phase2_output_dir, ignore_errors=True)
+        if force_reexport or not (phase2_output_dir / "training_summary.json").exists():
+            phase2_output_dir.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(
+                [str(train_phase2_binary), str(cfg_path), str(frozen_dir), str(phase2_output_dir)],
+                check=True,
+                cwd=ROOT,
+                env=env,
+            )
+
+        phase2_compact_dir = phase2_output_dir / "phase2_compact" / "iteration_0"
+        phase2_decoded_dir = phase2_output_dir / "decoded_compact" / "iteration_0"
+        model_eval_path = phase2_compact_dir if phase2_compact_dir.exists() else phase2_decoded_dir
+        eval_phase2_dir = result_dir / (
+            f"{checkpoint_name}_eval_phase2_compact"
+            if phase2_compact_dir.exists()
+            else f"{checkpoint_name}_eval_phase2_decoded_compact"
+        )
+        if force_reexport or not eval_metrics_exist(eval_phase2_dir):
+            subprocess.run(
+                [
+                    str((ROOT / exp["eval_binary"]).resolve()),
+                    str(cfg_path),
+                    str(dataset_path),
+                    str(model_eval_path),
+                    str(eval_phase2_dir),
+                ],
+                check=True,
+                cwd=ROOT,
+                env=env,
+            )
 
 
 def main():

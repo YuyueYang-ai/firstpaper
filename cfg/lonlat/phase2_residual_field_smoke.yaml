@@ -1,0 +1,17 @@
+%YAML:1.0
+
+Phase2Field.num_fourier_frequencies: 4
+Phase2Field.hidden_dim: 64
+Phase2Field.num_hidden_layers: 2
+Phase2Field.batch_size: 4096
+Phase2Field.max_steps: 20
+Phase2Field.log_interval: 5
+Phase2Field.eval_interval: 10
+Phase2Field.learning_rate: 1e-3
+Phase2Field.weight_decay: 1e-6
+Phase2Field.include_features_dc: 1
+Phase2Field.include_opacity: 1
+Phase2Field.save_decoded_compact: 1
+Phase2Field.decoded_xyz_quant_bits: 16
+Phase2Field.decoded_attribute_quant_bits: 16
+Phase2Field.decoded_rotation_quant_bits: 16

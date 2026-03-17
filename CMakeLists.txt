@@ -118,6 +118,7 @@ add_library(gaussian_mapper SHARED
     include/sh_bandwidth.h
     include/attribute_sort.h
     include/locality_codec.h
+    include/phase2_residual_field.h
     include/gaussian_codec.h
     include/gaussian_model.h
     include/gaussian_parameters.h
@@ -139,6 +140,7 @@ add_library(gaussian_mapper SHARED
     src/gaussian_keyframe.cpp
     src/attribute_sort.cpp
     src/locality_codec.cpp
+    src/phase2_residual_field.cpp
     src/gaussian_codec.cpp
     src/gaussian_model.cpp
     src/gaussian_parameters.cpp
@@ -203,6 +205,14 @@ target_link_libraries(test_openmvg_lonlat
 
 add_executable(export_compact examples/export_compact.cpp)
 target_link_libraries(export_compact
+    gaussian_mapper)
+
+add_executable(prepare_phase2 examples/prepare_phase2.cpp)
+target_link_libraries(prepare_phase2
+    gaussian_mapper)
+
+add_executable(train_phase2_residual_field examples/train_phase2_residual_field.cpp)
+target_link_libraries(train_phase2_residual_field
     gaussian_mapper)
 
 # Train 360Roam scenes

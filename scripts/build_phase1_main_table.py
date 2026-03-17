@@ -38,7 +38,33 @@ def format_method(row):
         return "export_shdrop"
     if variant == "compact_locality_residual":
         return "locality_residual"
+    if variant in {"phase2_decoded_compact", "phase2_compact"}:
+        return "phase2_residual_field"
     return variant
+
+
+def normalized_row(row, method):
+    return {
+        "scene": scene_name(row["scene"]),
+        "method": method,
+        "num_points": row["num_points"],
+        "ply_bytes": row["ply_bytes"],
+        "compact_bytes": row["compact_bytes"],
+        "compression_ratio": row["compression_ratio"],
+        "avg_psnr": row["avg_psnr"],
+        "avg_dssim": row["avg_dssim"],
+        "avg_render_ms": row["avg_render_ms"],
+    }
+
+
+def collect_rows(summary_path: Path, allowed_methods):
+    rows = []
+    for row in load_rows(summary_path):
+        method = format_method(row)
+        if method not in allowed_methods:
+            continue
+        rows.append(normalized_row(row, method))
+    return rows
 
 
 def format_cell(value):
@@ -78,49 +104,32 @@ def main():
     parser.add_argument("--formal-summary", default=str(ROOT / "results_smoke/formal_compare_summary.csv"))
     parser.add_argument("--shdrop-summary", default=str(ROOT / "results_smoke/export_shdrop_aggressive_compare.csv"))
     parser.add_argument("--locality-summary", default=str(ROOT / "results_smoke/export_locality_residual_compare.csv"))
+    parser.add_argument("--extra-summary", action="append", default=[], help="Optional extra summary csv files")
     parser.add_argument("--output", default=str(ROOT / "results_smoke/phase1_main_table.csv"))
     parser.add_argument("--markdown-output", default=str(ROOT / "results_smoke/phase1_main_table.md"))
     args = parser.parse_args()
 
     rows = []
-    for row in load_rows(Path(args.formal_summary)):
-        method = format_method(row)
-        if method not in {"baseline_ply", "baseline_compact_fixed", "compact_train_ply", "compact_fixed"}:
-            continue
-        rows.append(
-            {
-                "scene": scene_name(row["scene"]),
-                "method": method,
-                "num_points": row["num_points"],
-                "ply_bytes": row["ply_bytes"],
-                "compact_bytes": row["compact_bytes"],
-                "compression_ratio": row["compression_ratio"],
-                "avg_psnr": row["avg_psnr"],
-                "avg_dssim": row["avg_dssim"],
-                "avg_render_ms": row["avg_render_ms"],
-            }
-        )
+    primary_methods = {
+        "baseline_ply",
+        "baseline_compact_fixed",
+        "compact_train_ply",
+        "compact_fixed",
+        "phase2_residual_field",
+    }
+    rows.extend(collect_rows(Path(args.formal_summary), primary_methods))
+    for extra_summary in args.extra_summary:
+        rows.extend(collect_rows(Path(extra_summary), primary_methods))
     for summary_path, expected_method in [
         (Path(args.shdrop_summary), "export_shdrop"),
         (Path(args.locality_summary), "locality_residual"),
     ]:
-        for row in load_rows(summary_path):
-            method = format_method(row)
-            if method != expected_method:
-                continue
-            rows.append(
-                {
-                    "scene": scene_name(row["scene"]),
-                    "method": method,
-                    "num_points": row["num_points"],
-                    "ply_bytes": row["ply_bytes"],
-                    "compact_bytes": row["compact_bytes"],
-                    "compression_ratio": row["compression_ratio"],
-                    "avg_psnr": row["avg_psnr"],
-                    "avg_dssim": row["avg_dssim"],
-                    "avg_render_ms": row["avg_render_ms"],
-                }
-            )
+        rows.extend(collect_rows(summary_path, {expected_method}))
+
+    deduped = {}
+    for row in rows:
+        deduped.setdefault((row["scene"], row["method"]), row)
+    rows = list(deduped.values())
 
     method_order = {
         "baseline_ply": 0,
@@ -129,6 +138,7 @@ def main():
         "compact_fixed": 3,
         "export_shdrop": 4,
         "locality_residual": 5,
+        "phase2_residual_field": 6,
     }
     rows.sort(key=lambda row: (row["scene"], method_order.get(row["method"], 99)))
 
