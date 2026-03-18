@@ -52,10 +52,46 @@ std::vector<std::uint8_t> packInt4(const std::vector<int>& values)
     return packed;
 }
 
+std::vector<std::uint8_t> packInt2(const std::vector<int>& values)
+{
+    std::vector<std::uint8_t> packed((values.size() + 3) / 4, 0);
+    for (std::size_t idx = 0; idx < values.size(); ++idx) {
+        std::uint8_t code = 0;
+        switch (values[idx]) {
+        case 1:
+            code = 1u;
+            break;
+        case -1:
+            code = 2u;
+            break;
+        case 0:
+        default:
+            code = 0u;
+            break;
+        }
+        packed[idx / 4] |= static_cast<std::uint8_t>(code << ((idx & 3u) * 2u));
+    }
+    return packed;
+}
+
 inline int unpackInt4(std::uint8_t packed, bool high)
 {
     const std::uint8_t nibble = high ? static_cast<std::uint8_t>((packed >> 4) & 0xF) : static_cast<std::uint8_t>(packed & 0xF);
     return static_cast<int>(nibble) - 8;
+}
+
+inline int unpackInt2(std::uint8_t packed, std::size_t offset)
+{
+    const std::uint8_t code = static_cast<std::uint8_t>((packed >> ((offset & 3u) * 2u)) & 0x3u);
+    switch (code) {
+    case 1:
+        return 1;
+    case 2:
+        return -1;
+    case 0:
+    default:
+        return 0;
+    }
 }
 
 QuantizedResidualBlock quantizeResidualBlock(
@@ -71,7 +107,7 @@ QuantizedResidualBlock quantizeResidualBlock(
     if (point_count == 0 || payload_dims == 0 || residuals.empty())
         return block;
 
-    const float qmax = residual_bits == 4 ? 7.0f : 127.0f;
+    const float qmax = residual_bits == 2 ? 1.0f : (residual_bits == 4 ? 7.0f : 127.0f);
     std::vector<float> scales(payload_dims, 0.0f);
     for (std::size_t dim = 0; dim < payload_dims; ++dim) {
         float max_abs = 0.0f;
@@ -83,7 +119,24 @@ QuantizedResidualBlock quantizeResidualBlock(
 
     double sum_sq = 0.0;
     double err_sq = 0.0;
-    if (residual_bits == 4) {
+    if (residual_bits == 2) {
+        std::vector<int> quantized(residuals.size(), 0);
+        for (std::size_t idx = 0; idx < residuals.size(); ++idx) {
+            const std::size_t dim = idx % payload_dims;
+            const float scale = scales[dim];
+            int q = 0;
+            if (scale > 0.0f)
+                q = static_cast<int>(std::llround(static_cast<double>(residuals[idx]) / static_cast<double>(scale)));
+            q = std::clamp(q, -1, 1);
+            quantized[idx] = q;
+            const float reconstructed = static_cast<float>(q) * scale;
+            const double diff = static_cast<double>(residuals[idx] - reconstructed);
+            err_sq += diff * diff;
+            sum_sq += static_cast<double>(residuals[idx]) * static_cast<double>(residuals[idx]);
+        }
+        block.bytes = packInt2(quantized);
+    }
+    else if (residual_bits == 4) {
         std::vector<int> quantized(residuals.size(), 0);
         for (std::size_t idx = 0; idx < residuals.size(); ++idx) {
             const std::size_t dim = idx % payload_dims;
@@ -126,6 +179,77 @@ std::size_t blockSizeForLevel(int sh_level, int max_sh_degree, const CompactExpo
     if (sh_level >= max_sh_degree)
         return static_cast<std::size_t>(std::max(1, options.f_rest_locality_high_sh_block_size));
     return static_cast<std::size_t>(std::max(1, options.f_rest_locality_low_sh_block_size));
+}
+
+void appendEncodedResidualBlock(
+    locality_codec::EncodedRestPayload& encoded,
+    int sh_level,
+    std::size_t block_points,
+    std::size_t payload_dims,
+    const std::vector<float>& base,
+    const std::vector<float>& residuals,
+    const CompactExportOptions& options)
+{
+    locality_codec::RestBlockInfo block_info;
+    block_info.sh_level = static_cast<std::uint8_t>(sh_level);
+    block_info.point_count = static_cast<std::uint16_t>(block_points);
+
+    if (payload_dims == 0) {
+        block_info.residual_bits = 8;
+        encoded.blocks.push_back(block_info);
+        return;
+    }
+
+    const bool try_int2 = options.f_rest_locality_int2_rel_mse_threshold > 0.0f;
+    QuantizedResidualBlock int2_candidate;
+    if (try_int2)
+        int2_candidate = quantizeResidualBlock(residuals, block_points, payload_dims, 2);
+    const auto int4_candidate = quantizeResidualBlock(residuals, block_points, payload_dims, 4);
+    const auto int8_candidate = quantizeResidualBlock(residuals, block_points, payload_dims, 8);
+    const bool use_int2 = try_int2
+        && int2_candidate.relative_mse <= static_cast<double>(options.f_rest_locality_int2_rel_mse_threshold);
+    const bool use_int4 = !use_int2
+        && int4_candidate.relative_mse <= static_cast<double>(options.f_rest_locality_int4_rel_mse_threshold);
+    const auto& selected = use_int2 ? int2_candidate : (use_int4 ? int4_candidate : int8_candidate);
+
+    block_info.residual_bits = selected.residual_bits;
+    encoded.blocks.push_back(block_info);
+    encoded.payload_values += block_points * payload_dims;
+    if (use_int2)
+        ++encoded.int2_block_count;
+    else if (use_int4)
+        ++encoded.int4_block_count;
+    else
+        ++encoded.int8_block_count;
+
+    encoded.base_values.reserve(encoded.base_values.size() + payload_dims);
+    encoded.scale_values.reserve(encoded.scale_values.size() + payload_dims);
+    for (std::size_t dim = 0; dim < payload_dims; ++dim) {
+        encoded.base_values.push_back(c10::Half(base[dim]));
+        encoded.scale_values.push_back(selected.scales[dim]);
+    }
+    encoded.residual_bytes.insert(
+        encoded.residual_bytes.end(),
+        selected.bytes.begin(),
+        selected.bytes.end());
+    if (use_int2) {
+        encoded.residual_bytes_int2.insert(
+            encoded.residual_bytes_int2.end(),
+            selected.bytes.begin(),
+            selected.bytes.end());
+    }
+    else if (use_int4) {
+        encoded.residual_bytes_int4.insert(
+            encoded.residual_bytes_int4.end(),
+            selected.bytes.begin(),
+            selected.bytes.end());
+    }
+    else {
+        encoded.residual_bytes_int8.insert(
+            encoded.residual_bytes_int8.end(),
+            selected.bytes.begin(),
+            selected.bytes.end());
+    }
 }
 
 } // namespace
@@ -173,13 +297,8 @@ EncodedRestPayload encodeRestPayload(
         if (block_points > std::numeric_limits<std::uint16_t>::max())
             throw std::runtime_error("f_rest locality block exceeded uint16 point-count capacity.");
 
-        RestBlockInfo block_info;
-        block_info.sh_level = static_cast<std::uint8_t>(sh_level);
-        block_info.point_count = static_cast<std::uint16_t>(block_points);
-
         if (payload_dims == 0) {
-            block_info.residual_bits = 8;
-            encoded.blocks.push_back(block_info);
+            appendEncodedResidualBlock(encoded, sh_level, block_points, payload_dims, {}, {}, options);
             point_idx += static_cast<std::int64_t>(block_points);
             continue;
         }
@@ -200,30 +319,74 @@ EncodedRestPayload encodeRestPayload(
                 residuals[local_idx * payload_dims + dim] = point_ptr[dim] - base[dim];
         }
 
-        const auto int4_candidate = quantizeResidualBlock(residuals, block_points, payload_dims, 4);
-        const auto int8_candidate = quantizeResidualBlock(residuals, block_points, payload_dims, 8);
-        const bool use_int4 = int4_candidate.relative_mse <= static_cast<double>(options.f_rest_locality_int4_rel_mse_threshold);
-        const auto& selected = use_int4 ? int4_candidate : int8_candidate;
+        appendEncodedResidualBlock(encoded, sh_level, block_points, payload_dims, base, residuals, options);
 
-        block_info.residual_bits = selected.residual_bits;
-        encoded.blocks.push_back(block_info);
-        encoded.payload_values += block_points * payload_dims;
-        if (use_int4)
-            ++encoded.int4_block_count;
-        else
-            ++encoded.int8_block_count;
+        point_idx += static_cast<std::int64_t>(block_points);
+    }
 
-        encoded.base_values.reserve(encoded.base_values.size() + payload_dims);
-        encoded.scale_values.reserve(encoded.scale_values.size() + payload_dims);
-        for (std::size_t dim = 0; dim < payload_dims; ++dim) {
-            encoded.base_values.push_back(c10::Half(base[dim]));
-            encoded.scale_values.push_back(selected.scales[dim]);
+    return encoded;
+}
+
+EncodedRestPayload encodeRestPayloadPreserveBlocks(
+    const torch::Tensor& features_rest,
+    const torch::Tensor& block_ids,
+    const torch::Tensor& block_export_levels,
+    int max_sh_degree,
+    const CompactExportOptions& options)
+{
+    EncodedRestPayload encoded;
+    if (max_sh_degree <= 0 || !features_rest.defined() || features_rest.numel() == 0)
+        return encoded;
+    if (!block_ids.defined() || block_ids.numel() == 0 || !block_export_levels.defined() || block_export_levels.numel() == 0)
+        return encoded;
+
+    auto rest_cpu = features_rest.detach().contiguous().to(torch::kCPU, torch::kFloat32);
+    auto block_ids_cpu = block_ids.detach().contiguous().to(torch::kCPU, torch::kLong);
+    auto export_levels_cpu = block_export_levels.detach().contiguous().to(torch::kCPU, torch::kInt32);
+
+    const float* rest_ptr = rest_cpu.data_ptr<float>();
+    const int64_t* block_ids_ptr = block_ids_cpu.data_ptr<int64_t>();
+    const std::int32_t* levels_ptr = export_levels_cpu.data_ptr<std::int32_t>();
+    const std::int64_t num_points = rest_cpu.size(0);
+    const std::int64_t rest_coeffs = rest_cpu.size(1);
+
+    std::int64_t point_idx = 0;
+    while (point_idx < num_points) {
+        const int64_t block_id = block_ids_ptr[point_idx];
+        const int sh_level = std::clamp(static_cast<int>(levels_ptr[point_idx]), 0, max_sh_degree);
+        std::size_t block_points = 1;
+        while (point_idx + static_cast<std::int64_t>(block_points) < num_points
+               && block_ids_ptr[point_idx + static_cast<std::int64_t>(block_points)] == block_id) {
+            ++block_points;
         }
-        encoded.residual_bytes.insert(
-            encoded.residual_bytes.end(),
-            selected.bytes.begin(),
-            selected.bytes.end());
 
+        if (block_points > std::numeric_limits<std::uint16_t>::max())
+            throw std::runtime_error("Preserved locality block exceeded uint16 point-count capacity.");
+
+        const std::size_t payload_dims = restPayloadValuesForLevel(sh_level);
+        if (payload_dims == 0) {
+            appendEncodedResidualBlock(encoded, sh_level, block_points, payload_dims, {}, {}, options);
+            point_idx += static_cast<std::int64_t>(block_points);
+            continue;
+        }
+
+        std::vector<float> base(payload_dims, 0.0f);
+        for (std::size_t local_idx = 0; local_idx < block_points; ++local_idx) {
+            const float* point_ptr = rest_ptr + ((point_idx + static_cast<std::int64_t>(local_idx)) * rest_coeffs * 3);
+            for (std::size_t dim = 0; dim < payload_dims; ++dim)
+                base[dim] += point_ptr[dim];
+        }
+        for (float& value : base)
+            value /= static_cast<float>(block_points);
+
+        std::vector<float> residuals(block_points * payload_dims, 0.0f);
+        for (std::size_t local_idx = 0; local_idx < block_points; ++local_idx) {
+            const float* point_ptr = rest_ptr + ((point_idx + static_cast<std::int64_t>(local_idx)) * rest_coeffs * 3);
+            for (std::size_t dim = 0; dim < payload_dims; ++dim)
+                residuals[local_idx * payload_dims + dim] = point_ptr[dim] - base[dim];
+        }
+
+        appendEncodedResidualBlock(encoded, sh_level, block_points, payload_dims, base, residuals, options);
         point_idx += static_cast<std::int64_t>(block_points);
     }
 
@@ -532,7 +695,12 @@ std::vector<float> decodeRestPayload(
     auto levels_cpu = sh_levels.detach().contiguous().to(torch::kCPU, torch::kInt32);
     const std::int32_t* levels_ptr = levels_cpu.data_ptr<std::int32_t>();
 
+    const bool split_streams =
+        !encoded.residual_bytes_int2.empty() || !encoded.residual_bytes_int4.empty() || !encoded.residual_bytes_int8.empty();
     std::size_t residual_offset = 0;
+    std::size_t residual_offset_int2 = 0;
+    std::size_t residual_offset_int4 = 0;
+    std::size_t residual_offset_int8 = 0;
     std::size_t base_offset = 0;
     std::int64_t point_offset = 0;
     for (const auto& block : encoded.blocks) {
@@ -560,27 +728,45 @@ std::vector<float> decodeRestPayload(
         const c10::Half* scale_ptr = encoded.scale_values.data() + static_cast<std::ptrdiff_t>(base_offset);
         const std::size_t residual_values = block_points * payload_dims;
 
-        if (block.residual_bits == 4) {
+        if (block.residual_bits == 2) {
+            const std::size_t byte_count = (residual_values + 3) / 4;
+            const auto& int2_bytes = split_streams ? encoded.residual_bytes_int2 : encoded.residual_bytes;
+            std::size_t& current_offset = split_streams ? residual_offset_int2 : residual_offset;
+            if (current_offset + byte_count > int2_bytes.size())
+                throw std::runtime_error("Locality codec int2 residual buffer is truncated.");
+            for (std::size_t value_idx = 0; value_idx < residual_values; ++value_idx) {
+                const std::uint8_t packed = int2_bytes[current_offset + value_idx / 4];
+                const int q = unpackInt2(packed, value_idx);
+                const std::size_t dim = value_idx % payload_dims;
+                payload.push_back(static_cast<float>(base_ptr[dim]) + static_cast<float>(q) * static_cast<float>(scale_ptr[dim]));
+            }
+            current_offset += byte_count;
+        }
+        else if (block.residual_bits == 4) {
             const std::size_t byte_count = (residual_values + 1) / 2;
-            if (residual_offset + byte_count > encoded.residual_bytes.size())
+            const auto& int4_bytes = split_streams ? encoded.residual_bytes_int4 : encoded.residual_bytes;
+            std::size_t& current_offset = split_streams ? residual_offset_int4 : residual_offset;
+            if (current_offset + byte_count > int4_bytes.size())
                 throw std::runtime_error("Locality codec int4 residual buffer is truncated.");
             for (std::size_t value_idx = 0; value_idx < residual_values; ++value_idx) {
-                const std::uint8_t packed = encoded.residual_bytes[residual_offset + value_idx / 2];
+                const std::uint8_t packed = int4_bytes[current_offset + value_idx / 2];
                 const int q = unpackInt4(packed, (value_idx & 1u) != 0u);
                 const std::size_t dim = value_idx % payload_dims;
                 payload.push_back(static_cast<float>(base_ptr[dim]) + static_cast<float>(q) * static_cast<float>(scale_ptr[dim]));
             }
-            residual_offset += byte_count;
+            current_offset += byte_count;
         }
         else if (block.residual_bits == 8) {
-            if (residual_offset + residual_values > encoded.residual_bytes.size())
+            const auto& int8_bytes = split_streams ? encoded.residual_bytes_int8 : encoded.residual_bytes;
+            std::size_t& current_offset = split_streams ? residual_offset_int8 : residual_offset;
+            if (current_offset + residual_values > int8_bytes.size())
                 throw std::runtime_error("Locality codec int8 residual buffer is truncated.");
             for (std::size_t value_idx = 0; value_idx < residual_values; ++value_idx) {
-                const std::int8_t q = static_cast<std::int8_t>(encoded.residual_bytes[residual_offset + value_idx]);
+                const std::int8_t q = static_cast<std::int8_t>(int8_bytes[current_offset + value_idx]);
                 const std::size_t dim = value_idx % payload_dims;
                 payload.push_back(static_cast<float>(base_ptr[dim]) + static_cast<float>(q) * static_cast<float>(scale_ptr[dim]));
             }
-            residual_offset += residual_values;
+            current_offset += residual_values;
         }
         else {
             throw std::runtime_error("Unsupported locality codec residual bitwidth.");
@@ -594,8 +780,17 @@ std::vector<float> decodeRestPayload(
         throw std::runtime_error("Decoded locality block layout does not cover all points.");
     if (base_offset != encoded.base_values.size() || base_offset != encoded.scale_values.size())
         throw std::runtime_error("Decoded locality base/scale buffer size mismatch.");
-    if (residual_offset != encoded.residual_bytes.size())
+    if (split_streams) {
+        if (residual_offset_int2 != encoded.residual_bytes_int2.size())
+            throw std::runtime_error("Decoded locality int2 residual buffer size mismatch.");
+        if (residual_offset_int4 != encoded.residual_bytes_int4.size())
+            throw std::runtime_error("Decoded locality int4 residual buffer size mismatch.");
+        if (residual_offset_int8 != encoded.residual_bytes_int8.size())
+            throw std::runtime_error("Decoded locality int8 residual buffer size mismatch.");
+    }
+    else if (residual_offset != encoded.residual_bytes.size()) {
         throw std::runtime_error("Decoded locality residual buffer size mismatch.");
+    }
     if (payload.size() != encoded.payload_values)
         throw std::runtime_error("Decoded locality payload size mismatch.");
 

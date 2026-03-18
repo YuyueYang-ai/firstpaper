@@ -27,6 +27,8 @@ find_package(CUDA REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV 4 REQUIRED)
 find_package(jsoncpp REQUIRED)
+find_package(ZLIB REQUIRED)
+find_library(LZMA_LIBRARY NAMES lzma REQUIRED)
 
 find_package(OpenGL REQUIRED)
 find_package(glm REQUIRED)
@@ -121,6 +123,7 @@ add_library(gaussian_mapper SHARED
     include/geometry_codec.h
     include/hashgrid_field.h
     include/locality_codec.h
+    include/phase2_hybrid_selector.h
     include/phase2_residual_field.h
     include/gaussian_codec.h
     include/gaussian_model.h
@@ -146,6 +149,7 @@ add_library(gaussian_mapper SHARED
     src/geometry_codec.cpp
     src/locality_codec.cpp
     src/hashgrid_field.cpp
+    src/phase2_hybrid_selector.cpp
     src/phase2_residual_field.cpp
     src/gaussian_codec.cpp
     src/gaussian_model.cpp
@@ -160,6 +164,8 @@ add_library(gaussian_mapper SHARED
 target_link_libraries(gaussian_mapper
     ${OpenCV_LIBRARIES}
     jsoncpp_lib
+    ZLIB::ZLIB
+    ${LZMA_LIBRARY}
     "${TORCH_LIBRARIES}"
     Eigen3::Eigen
     simple_knn

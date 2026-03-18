@@ -360,6 +360,30 @@ void GaussianMapper::readConfigFromFile(std::filesystem::path cfg_path)
     if (!settings_file["Phase2.locality_low_sh_block_size"].empty())
         phase2_options_.locality_low_sh_block_size =
             settings_file["Phase2.locality_low_sh_block_size"].operator int();
+    if (!settings_file["Phase2HybridSelector.enable"].empty())
+        phase2_options_.hybrid_selector.enable = (settings_file["Phase2HybridSelector.enable"].operator int()) != 0;
+    if (!settings_file["Phase2HybridSelector.hard_point_ratio"].empty())
+        phase2_options_.hybrid_selector.hard_point_ratio = settings_file["Phase2HybridSelector.hard_point_ratio"].operator float();
+    if (!settings_file["Phase2HybridSelector.alpha"].empty())
+        phase2_options_.hybrid_selector.alpha = settings_file["Phase2HybridSelector.alpha"].operator float();
+    if (!settings_file["Phase2HybridSelector.beta"].empty())
+        phase2_options_.hybrid_selector.beta = settings_file["Phase2HybridSelector.beta"].operator float();
+    if (!settings_file["Phase2HybridSelector.gamma"].empty())
+        phase2_options_.hybrid_selector.gamma = settings_file["Phase2HybridSelector.gamma"].operator float();
+    if (!settings_file["Phase2HybridSelector.delta"].empty())
+        phase2_options_.hybrid_selector.delta = settings_file["Phase2HybridSelector.delta"].operator float();
+    phase2_options_.hybrid_selector.explicit_cost_int4_rel_mse_threshold =
+        compact_export_options_.f_rest_locality_int4_rel_mse_threshold;
+    if (!settings_file["Phase2HybridSelector.explicit_cost_int4_rel_mse_threshold"].empty())
+        phase2_options_.hybrid_selector.explicit_cost_int4_rel_mse_threshold =
+            settings_file["Phase2HybridSelector.explicit_cost_int4_rel_mse_threshold"].operator float();
+    if (!settings_file["Phase2HybridSelector.min_hard_blocks"].empty())
+        phase2_options_.hybrid_selector.min_hard_blocks = settings_file["Phase2HybridSelector.min_hard_blocks"].operator int();
+    if (!settings_file["Phase2HybridSelector.max_hard_blocks"].empty())
+        phase2_options_.hybrid_selector.max_hard_blocks = settings_file["Phase2HybridSelector.max_hard_blocks"].operator int();
+    if (!settings_file["Phase2HybridSelector.save_debug_tensors"].empty())
+        phase2_options_.hybrid_selector.save_debug_tensors =
+            (settings_file["Phase2HybridSelector.save_debug_tensors"].operator int()) != 0;
     if (phase2_options_.freeze_topology_iter < 0)
         phase2_options_.freeze_topology_iter = opt_params_.densify_until_iter_;
     std::cout << "[Gaussian Mapper]Compression mode: " << compressionModeName(compression_mode_) << std::endl;
@@ -391,6 +415,14 @@ void GaussianMapper::readConfigFromFile(std::filesystem::path cfg_path)
                   << " locality_base=" << (phase2_options_.use_locality_base ? "true" : "false")
                   << " high_block=" << phase2_options_.locality_high_sh_block_size
                   << " low_block=" << phase2_options_.locality_low_sh_block_size
+                  << " hybrid_selector=" << (phase2_options_.hybrid_selector.enable ? "true" : "false")
+                  << " hybrid_hard_ratio=" << phase2_options_.hybrid_selector.hard_point_ratio
+                  << " selector_weights=("
+                  << phase2_options_.hybrid_selector.alpha << ","
+                  << phase2_options_.hybrid_selector.beta << ","
+                  << phase2_options_.hybrid_selector.gamma << ","
+                  << phase2_options_.hybrid_selector.delta << ")"
+                  << " selector_int4_thresh=" << phase2_options_.hybrid_selector.explicit_cost_int4_rel_mse_threshold
                   << std::endl;
     }
 

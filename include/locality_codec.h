@@ -45,7 +45,11 @@ struct EncodedRestPayload
     std::vector<c10::Half> base_values;
     std::vector<c10::Half> scale_values;
     std::vector<std::uint8_t> residual_bytes;
+    std::vector<std::uint8_t> residual_bytes_int2;
+    std::vector<std::uint8_t> residual_bytes_int4;
+    std::vector<std::uint8_t> residual_bytes_int8;
     std::size_t payload_values = 0;
+    std::size_t int2_block_count = 0;
     std::size_t int4_block_count = 0;
     std::size_t int8_block_count = 0;
 };
@@ -53,6 +57,13 @@ struct EncodedRestPayload
 EncodedRestPayload encodeRestPayload(
     const torch::Tensor& features_rest,
     const torch::Tensor& sh_levels,
+    int max_sh_degree,
+    const CompactExportOptions& options);
+
+EncodedRestPayload encodeRestPayloadPreserveBlocks(
+    const torch::Tensor& features_rest,
+    const torch::Tensor& block_ids,
+    const torch::Tensor& block_export_levels,
     int max_sh_degree,
     const CompactExportOptions& options);
 

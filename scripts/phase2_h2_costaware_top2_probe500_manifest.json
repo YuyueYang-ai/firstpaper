@@ -1,0 +1,22 @@
+[
+  {
+    "name": "r002",
+    "hard_point_ratio": 0.02,
+    "notes": "2% hard points with cost-aware selector, 500-step probe",
+    "alpha": 0.35,
+    "beta": 0.10,
+    "gamma": 0.45,
+    "delta": 0.10,
+    "explicit_cost_int4_rel_mse_threshold": 0.02
+  },
+  {
+    "name": "r003",
+    "hard_point_ratio": 0.03,
+    "notes": "3% hard points with cost-aware selector, 500-step probe",
+    "alpha": 0.35,
+    "beta": 0.10,
+    "gamma": 0.45,
+    "delta": 0.10,
+    "explicit_cost_int4_rel_mse_threshold": 0.02
+  }
+]

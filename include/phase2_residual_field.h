@@ -53,9 +53,19 @@ struct FrozenResidualFieldPackage
     torch::Tensor rotation;
     torch::Tensor sh_levels;
     torch::Tensor block_ids;
+    torch::Tensor block_scores;
+    torch::Tensor block_mean_mse;
+    torch::Tensor block_max_abs;
+    torch::Tensor block_point_counts;
+    torch::Tensor block_levels;
+    torch::Tensor hard_block_flags;
+    torch::Tensor hard_point_flags;
+    torch::Tensor hard_block_ids;
     torch::Tensor morton_order;
     torch::Tensor inverse_morton_order;
     int64_t num_blocks = 0;
+    int64_t num_hard_blocks = 0;
+    int64_t num_hard_points = 0;
 };
 
 struct Phase2ResidualFieldTrainResult

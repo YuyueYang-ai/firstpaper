@@ -1,0 +1,12 @@
+[
+  {
+    "name": "r003",
+    "hard_point_ratio": 0.03,
+    "notes": "3% hard points long probe"
+  },
+  {
+    "name": "r005",
+    "hard_point_ratio": 0.05,
+    "notes": "5% hard points long probe"
+  }
+]

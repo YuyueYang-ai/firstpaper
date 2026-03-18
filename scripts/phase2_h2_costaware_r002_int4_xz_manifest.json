@@ -1,0 +1,46 @@
+[
+  {
+    "name": "t010",
+    "hard_point_ratio": 0.02,
+    "notes": "r002 cost-aware, xz packaging, int4 threshold 0.01",
+    "alpha": 0.35,
+    "beta": 0.10,
+    "gamma": 0.45,
+    "delta": 0.10,
+    "explicit_cost_int4_rel_mse_threshold": 0.01,
+    "compression_f_rest_locality_int4_rel_mse_threshold": 0.01
+  },
+  {
+    "name": "t020",
+    "hard_point_ratio": 0.02,
+    "notes": "r002 cost-aware, xz packaging, int4 threshold 0.02",
+    "alpha": 0.35,
+    "beta": 0.10,
+    "gamma": 0.45,
+    "delta": 0.10,
+    "explicit_cost_int4_rel_mse_threshold": 0.02,
+    "compression_f_rest_locality_int4_rel_mse_threshold": 0.02
+  },
+  {
+    "name": "t030",
+    "hard_point_ratio": 0.02,
+    "notes": "r002 cost-aware, xz packaging, int4 threshold 0.03",
+    "alpha": 0.35,
+    "beta": 0.10,
+    "gamma": 0.45,
+    "delta": 0.10,
+    "explicit_cost_int4_rel_mse_threshold": 0.03,
+    "compression_f_rest_locality_int4_rel_mse_threshold": 0.03
+  },
+  {
+    "name": "t040",
+    "hard_point_ratio": 0.02,
+    "notes": "r002 cost-aware, xz packaging, int4 threshold 0.04",
+    "alpha": 0.35,
+    "beta": 0.10,
+    "gamma": 0.45,
+    "delta": 0.10,
+    "explicit_cost_int4_rel_mse_threshold": 0.04,
+    "compression_f_rest_locality_int4_rel_mse_threshold": 0.04
+  }
+]

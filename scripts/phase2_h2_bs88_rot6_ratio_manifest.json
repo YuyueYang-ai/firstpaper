@@ -1,0 +1,98 @@
+[
+  {
+    "alpha": 0.35,
+    "beta": 0.1,
+    "gamma": 0.45,
+    "delta": 0.1,
+    "explicit_cost_int4_rel_mse_threshold": 0.02,
+    "compression_f_rest_locality_int4_rel_mse_threshold": 0.02,
+    "train_cfg_overrides": {
+      "Phase2Field.phase2_compact_fdc_quant_bits": 8,
+      "Phase2Field.decoded_attribute_quant_bits": 8,
+      "Phase2Field.decoded_rotation_quant_bits": 6,
+      "Phase2Field.phase2_compact_easy_rest_base_quant_bits": 8,
+      "Phase2Field.phase2_compact_easy_rest_scale_quant_bits": 8,
+      "Phase2Field.phase2_compact_use_xz": 1,
+      "Phase2Field.phase2_compact_store_field_fp16": 1,
+      "Phase2Field.phase2_compact_easy_rest_zlib": 1,
+      "Phase2Field.phase2_compact_quantized_tensor_zlib": 1,
+      "Phase2Field.phase2_compact_field_zlib": 1,
+      "Phase2Field.phase2_compact_geometry_zlib": 1
+    },
+    "name": "bs88_rot6_r0005",
+    "hard_point_ratio": 0.005,
+    "notes": "rot6 + easy base/scale 8bit, ratio=0.005"
+  },
+  {
+    "alpha": 0.35,
+    "beta": 0.1,
+    "gamma": 0.45,
+    "delta": 0.1,
+    "explicit_cost_int4_rel_mse_threshold": 0.02,
+    "compression_f_rest_locality_int4_rel_mse_threshold": 0.02,
+    "train_cfg_overrides": {
+      "Phase2Field.phase2_compact_fdc_quant_bits": 8,
+      "Phase2Field.decoded_attribute_quant_bits": 8,
+      "Phase2Field.decoded_rotation_quant_bits": 6,
+      "Phase2Field.phase2_compact_easy_rest_base_quant_bits": 8,
+      "Phase2Field.phase2_compact_easy_rest_scale_quant_bits": 8,
+      "Phase2Field.phase2_compact_use_xz": 1,
+      "Phase2Field.phase2_compact_store_field_fp16": 1,
+      "Phase2Field.phase2_compact_easy_rest_zlib": 1,
+      "Phase2Field.phase2_compact_quantized_tensor_zlib": 1,
+      "Phase2Field.phase2_compact_field_zlib": 1,
+      "Phase2Field.phase2_compact_geometry_zlib": 1
+    },
+    "name": "bs88_rot6_r001",
+    "hard_point_ratio": 0.01,
+    "notes": "rot6 + easy base/scale 8bit, ratio=0.01"
+  },
+  {
+    "alpha": 0.35,
+    "beta": 0.1,
+    "gamma": 0.45,
+    "delta": 0.1,
+    "explicit_cost_int4_rel_mse_threshold": 0.02,
+    "compression_f_rest_locality_int4_rel_mse_threshold": 0.02,
+    "train_cfg_overrides": {
+      "Phase2Field.phase2_compact_fdc_quant_bits": 8,
+      "Phase2Field.decoded_attribute_quant_bits": 8,
+      "Phase2Field.decoded_rotation_quant_bits": 6,
+      "Phase2Field.phase2_compact_easy_rest_base_quant_bits": 8,
+      "Phase2Field.phase2_compact_easy_rest_scale_quant_bits": 8,
+      "Phase2Field.phase2_compact_use_xz": 1,
+      "Phase2Field.phase2_compact_store_field_fp16": 1,
+      "Phase2Field.phase2_compact_easy_rest_zlib": 1,
+      "Phase2Field.phase2_compact_quantized_tensor_zlib": 1,
+      "Phase2Field.phase2_compact_field_zlib": 1,
+      "Phase2Field.phase2_compact_geometry_zlib": 1
+    },
+    "name": "bs88_rot6_r0015",
+    "hard_point_ratio": 0.015,
+    "notes": "rot6 + easy base/scale 8bit, ratio=0.015"
+  },
+  {
+    "alpha": 0.35,
+    "beta": 0.1,
+    "gamma": 0.45,
+    "delta": 0.1,
+    "explicit_cost_int4_rel_mse_threshold": 0.02,
+    "compression_f_rest_locality_int4_rel_mse_threshold": 0.02,
+    "train_cfg_overrides": {
+      "Phase2Field.phase2_compact_fdc_quant_bits": 8,
+      "Phase2Field.decoded_attribute_quant_bits": 8,
+      "Phase2Field.decoded_rotation_quant_bits": 6,
+      "Phase2Field.phase2_compact_easy_rest_base_quant_bits": 8,
+      "Phase2Field.phase2_compact_easy_rest_scale_quant_bits": 8,
+      "Phase2Field.phase2_compact_use_xz": 1,
+      "Phase2Field.phase2_compact_store_field_fp16": 1,
+      "Phase2Field.phase2_compact_easy_rest_zlib": 1,
+      "Phase2Field.phase2_compact_quantized_tensor_zlib": 1,
+      "Phase2Field.phase2_compact_field_zlib": 1,
+      "Phase2Field.phase2_compact_geometry_zlib": 1
+    },
+    "name": "bs88_rot6_r002",
+    "hard_point_ratio": 0.02,
+    "notes": "rot6 + easy base/scale 8bit, ratio=0.02"
+  }
+]

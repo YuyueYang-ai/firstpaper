@@ -1,0 +1,62 @@
+[
+  {
+    "name": "w00_old_residual",
+    "hard_point_ratio": 0.03,
+    "notes": "legacy residual-heavy selector",
+    "alpha": 0.70,
+    "beta": 0.20,
+    "gamma": 0.00,
+    "delta": 0.10,
+    "explicit_cost_int4_rel_mse_threshold": 0.02
+  },
+  {
+    "name": "w01_current_storage",
+    "hard_point_ratio": 0.03,
+    "notes": "current storage-aware selector",
+    "alpha": 0.45,
+    "beta": 0.10,
+    "gamma": 0.35,
+    "delta": 0.10,
+    "explicit_cost_int4_rel_mse_threshold": 0.02
+  },
+  {
+    "name": "w02_cost_heavier",
+    "hard_point_ratio": 0.03,
+    "notes": "more explicit-cost weight",
+    "alpha": 0.35,
+    "beta": 0.10,
+    "gamma": 0.45,
+    "delta": 0.10,
+    "explicit_cost_int4_rel_mse_threshold": 0.02
+  },
+  {
+    "name": "w03_cost_dominant",
+    "hard_point_ratio": 0.03,
+    "notes": "cost-dominant selector",
+    "alpha": 0.25,
+    "beta": 0.10,
+    "gamma": 0.55,
+    "delta": 0.10,
+    "explicit_cost_int4_rel_mse_threshold": 0.02
+  },
+  {
+    "name": "w04_cost_heavier_strict",
+    "hard_point_ratio": 0.03,
+    "notes": "cost-heavier with stricter int4 estimate",
+    "alpha": 0.35,
+    "beta": 0.10,
+    "gamma": 0.45,
+    "delta": 0.10,
+    "explicit_cost_int4_rel_mse_threshold": 0.01
+  },
+  {
+    "name": "w05_cost_heavier_loose",
+    "hard_point_ratio": 0.03,
+    "notes": "cost-heavier with looser int4 estimate",
+    "alpha": 0.35,
+    "beta": 0.10,
+    "gamma": 0.45,
+    "delta": 0.10,
+    "explicit_cost_int4_rel_mse_threshold": 0.04
+  }
+]

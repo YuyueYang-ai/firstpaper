@@ -1,0 +1,22 @@
+[
+  {
+    "name": "r003",
+    "hard_point_ratio": 0.03,
+    "notes": "3% hard points"
+  },
+  {
+    "name": "r005",
+    "hard_point_ratio": 0.05,
+    "notes": "5% hard points"
+  },
+  {
+    "name": "r008",
+    "hard_point_ratio": 0.08,
+    "notes": "8% hard points"
+  },
+  {
+    "name": "r010",
+    "hard_point_ratio": 0.10,
+    "notes": "10% hard points"
+  }
+]

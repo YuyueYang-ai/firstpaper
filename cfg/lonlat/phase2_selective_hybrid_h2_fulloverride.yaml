@@ -1,0 +1,36 @@
+%YAML:1.0
+
+Phase2Field.num_fourier_frequencies: 4
+Phase2Field.use_hashgrid_encoder: 1
+Phase2Field.hashgrid_num_levels: 4
+Phase2Field.hashgrid_features_per_level: 2
+Phase2Field.hashgrid_log2_hashmap_size: 14
+Phase2Field.hashgrid_base_resolution: 8
+Phase2Field.hashgrid_per_level_scale: 1.5
+Phase2Field.hidden_dim: 64
+Phase2Field.num_hidden_layers: 2
+Phase2Field.batch_size: 4096
+Phase2Field.max_steps: 100
+Phase2Field.log_interval: 20
+Phase2Field.eval_interval: 20
+Phase2Field.learning_rate: 1e-3
+Phase2Field.weight_decay: 1e-6
+Phase2Field.include_features_dc: 1
+Phase2Field.include_opacity: 1
+Phase2Field.include_scaling: 1
+Phase2Field.include_rotation: 1
+Phase2Field.predict_opacity: 1
+Phase2Field.predict_scaling: 1
+Phase2Field.predict_rotation: 1
+Phase2Field.block_embedding_dim: 8
+Phase2Field.hybrid_hard_only: 1
+Phase2Field.hybrid_override_rest_only: 0
+Phase2Field.save_decoded_compact: 0
+Phase2Field.save_phase2_compact: 1
+Phase2Field.decoded_xyz_quant_bits: 16
+Phase2Field.decoded_attribute_quant_bits: 16
+Phase2Field.decoded_rotation_quant_bits: 16
+Phase2Field.phase2_compact_pack_sh_levels: 1
+Phase2Field.phase2_compact_fdc_quant_bits: 8
+Phase2Field.phase2_compact_use_geometry_codec: 1
+Phase2Field.phase2_compact_geometry_quant_bits: 16

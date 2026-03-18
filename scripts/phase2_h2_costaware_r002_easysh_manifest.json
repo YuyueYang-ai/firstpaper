@@ -1,0 +1,13 @@
+[
+  {
+    "name": "r002_easysh",
+    "hard_point_ratio": 0.02,
+    "notes": "2% hard points, cost-aware selector, easy export-only SH drop",
+    "alpha": 0.35,
+    "beta": 0.10,
+    "gamma": 0.45,
+    "delta": 0.10,
+    "explicit_cost_int4_rel_mse_threshold": 0.02,
+    "compression_f_rest_locality_int4_rel_mse_threshold": 0.02
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "name": "e098",
+    "hard_point_ratio": 0.02,
+    "notes": "2% hard points, cost-aware selector, block-wise easy SH drop, energy 0.98",
+    "alpha": 0.35,
+    "beta": 0.10,
+    "gamma": 0.45,
+    "delta": 0.10,
+    "explicit_cost_int4_rel_mse_threshold": 0.02,
+    "compression_f_rest_locality_int4_rel_mse_threshold": 0.02,
+    "train_cfg_overrides": {
+      "Phase2Field.hybrid_easy_export_sh_energy_keep_ratio": 0.98
+    }
+  },
+  {
+    "name": "e095",
+    "hard_point_ratio": 0.02,
+    "notes": "2% hard points, cost-aware selector, block-wise easy SH drop, energy 0.95",
+    "alpha": 0.35,
+    "beta": 0.10,
+    "gamma": 0.45,
+    "delta": 0.10,
+    "explicit_cost_int4_rel_mse_threshold": 0.02,
+    "compression_f_rest_locality_int4_rel_mse_threshold": 0.02,
+    "train_cfg_overrides": {
+      "Phase2Field.hybrid_easy_export_sh_energy_keep_ratio": 0.95
+    }
+  },
+  {
+    "name": "e090",
+    "hard_point_ratio": 0.02,
+    "notes": "2% hard points, cost-aware selector, block-wise easy SH drop, energy 0.90",
+    "alpha": 0.35,
+    "beta": 0.10,
+    "gamma": 0.45,
+    "delta": 0.10,
+    "explicit_cost_int4_rel_mse_threshold": 0.02,
+    "compression_f_rest_locality_int4_rel_mse_threshold": 0.02,
+    "train_cfg_overrides": {
+      "Phase2Field.hybrid_easy_export_sh_energy_keep_ratio": 0.90
+    }
+  },
+  {
+    "name": "e085",
+    "hard_point_ratio": 0.02,
+    "notes": "2% hard points, cost-aware selector, block-wise easy SH drop, energy 0.85",
+    "alpha": 0.35,
+    "beta": 0.10,
+    "gamma": 0.45,
+    "delta": 0.10,
+    "explicit_cost_int4_rel_mse_threshold": 0.02,
+    "compression_f_rest_locality_int4_rel_mse_threshold": 0.02,
+    "train_cfg_overrides": {
+      "Phase2Field.hybrid_easy_export_sh_energy_keep_ratio": 0.85
+    }
+  }
+]

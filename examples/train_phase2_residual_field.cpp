@@ -80,6 +80,17 @@ int main(int argc, char** argv)
         if (!settings["Phase2Field.predict_rotation"].empty())
             options.predict_rotation = (settings["Phase2Field.predict_rotation"].operator int()) != 0;
         readIfPresent(settings, "Phase2Field.block_embedding_dim", options.block_embedding_dim);
+        if (!settings["Phase2Field.hybrid_hard_only"].empty())
+            options.hybrid_hard_only = (settings["Phase2Field.hybrid_hard_only"].operator int()) != 0;
+        if (!settings["Phase2Field.hybrid_override_rest_only"].empty())
+            options.hybrid_override_rest_only = (settings["Phase2Field.hybrid_override_rest_only"].operator int()) != 0;
+        if (!settings["Phase2Field.hybrid_easy_export_sh_drop"].empty())
+            options.hybrid_easy_export_sh_drop = (settings["Phase2Field.hybrid_easy_export_sh_drop"].operator int()) != 0;
+        if (!settings["Phase2Field.hybrid_easy_export_sh_preserve_blocks"].empty())
+            options.hybrid_easy_export_sh_preserve_blocks = (settings["Phase2Field.hybrid_easy_export_sh_preserve_blocks"].operator int()) != 0;
+        readIfPresent(settings, "Phase2Field.hybrid_easy_export_sh_energy_keep_ratio", options.hybrid_easy_export_sh_energy_keep_ratio);
+        readIfPresent(settings, "Phase2Field.hybrid_easy_export_sh_min_opacity", options.hybrid_easy_export_sh_min_opacity);
+        readIfPresent(settings, "Phase2Field.hybrid_easy_export_sh_min_level", options.hybrid_easy_export_sh_min_level);
         if (!settings["Phase2Field.save_decoded_compact"].empty())
             options.save_decoded_compact = (settings["Phase2Field.save_decoded_compact"].operator int()) != 0;
         if (!settings["Phase2Field.save_phase2_compact"].empty())
@@ -87,12 +98,33 @@ int main(int argc, char** argv)
         readIfPresent(settings, "Phase2Field.decoded_xyz_quant_bits", options.decoded_xyz_quant_bits);
         readIfPresent(settings, "Phase2Field.decoded_attribute_quant_bits", options.decoded_attribute_quant_bits);
         readIfPresent(settings, "Phase2Field.decoded_rotation_quant_bits", options.decoded_rotation_quant_bits);
+        readIfPresent(settings, "Phase2Field.phase2_compact_opacity_quant_bits", options.phase2_compact_opacity_quant_bits);
+        readIfPresent(settings, "Phase2Field.phase2_compact_scaling_quant_bits", options.phase2_compact_scaling_quant_bits);
         if (!settings["Phase2Field.phase2_compact_pack_sh_levels"].empty())
             options.phase2_compact_pack_sh_levels = (settings["Phase2Field.phase2_compact_pack_sh_levels"].operator int()) != 0;
         readIfPresent(settings, "Phase2Field.phase2_compact_fdc_quant_bits", options.phase2_compact_fdc_quant_bits);
+        readIfPresent(settings, "Phase2Field.phase2_compact_easy_rest_base_quant_bits", options.phase2_compact_easy_rest_base_quant_bits);
+        readIfPresent(settings, "Phase2Field.phase2_compact_easy_rest_scale_quant_bits", options.phase2_compact_easy_rest_scale_quant_bits);
+        readIfPresent(settings, "Phase2Field.phase2_compact_easy_rest_int2_rel_mse_threshold", options.phase2_compact_easy_rest_int2_rel_mse_threshold);
         if (!settings["Phase2Field.phase2_compact_use_geometry_codec"].empty())
             options.phase2_compact_use_geometry_codec = (settings["Phase2Field.phase2_compact_use_geometry_codec"].operator int()) != 0;
         readIfPresent(settings, "Phase2Field.phase2_compact_geometry_quant_bits", options.phase2_compact_geometry_quant_bits);
+        if (!settings["Phase2Field.phase2_compact_store_field_fp16"].empty())
+            options.phase2_compact_store_field_fp16 = (settings["Phase2Field.phase2_compact_store_field_fp16"].operator int()) != 0;
+        if (!settings["Phase2Field.phase2_compact_easy_rest_zlib"].empty())
+            options.phase2_compact_easy_rest_zlib = (settings["Phase2Field.phase2_compact_easy_rest_zlib"].operator int()) != 0;
+        readIfPresent(settings, "Phase2Field.phase2_compact_easy_rest_zlib_level", options.phase2_compact_easy_rest_zlib_level);
+        if (!settings["Phase2Field.phase2_compact_quantized_tensor_zlib"].empty())
+            options.phase2_compact_quantized_tensor_zlib = (settings["Phase2Field.phase2_compact_quantized_tensor_zlib"].operator int()) != 0;
+        readIfPresent(settings, "Phase2Field.phase2_compact_quantized_tensor_zlib_level", options.phase2_compact_quantized_tensor_zlib_level);
+        if (!settings["Phase2Field.phase2_compact_geometry_zlib"].empty())
+            options.phase2_compact_geometry_zlib = (settings["Phase2Field.phase2_compact_geometry_zlib"].operator int()) != 0;
+        readIfPresent(settings, "Phase2Field.phase2_compact_geometry_zlib_level", options.phase2_compact_geometry_zlib_level);
+        if (!settings["Phase2Field.phase2_compact_field_zlib"].empty())
+            options.phase2_compact_field_zlib = (settings["Phase2Field.phase2_compact_field_zlib"].operator int()) != 0;
+        readIfPresent(settings, "Phase2Field.phase2_compact_field_zlib_level", options.phase2_compact_field_zlib_level);
+        if (!settings["Phase2Field.phase2_compact_use_xz"].empty())
+            options.phase2_compact_use_xz = (settings["Phase2Field.phase2_compact_use_xz"].operator int()) != 0;
 
         auto frozen = phase2_residual_field::loadFrozenPackage(input_phase2_dir, device_type);
         auto result = phase2_residual_field::trainResidualField(frozen, options, output_dir);

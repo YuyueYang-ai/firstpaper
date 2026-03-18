@@ -61,6 +61,7 @@ struct CompactExportOptions
     bool f_rest_locality_codec = false;
     int f_rest_locality_high_sh_block_size = 64;
     int f_rest_locality_low_sh_block_size = 128;
+    float f_rest_locality_int2_rel_mse_threshold = 0.0f;
     float f_rest_locality_int4_rel_mse_threshold = 0.02f;
 
     int xyz_quant_bits = 16;
@@ -70,6 +71,20 @@ struct CompactExportOptions
 
 struct Phase2ResidualFieldOptions
 {
+    struct HybridSelectorOptions
+    {
+        bool enable = false;
+        float hard_point_ratio = 0.15f;
+        float alpha = 0.45f;
+        float beta = 0.10f;
+        float gamma = 0.35f;
+        float delta = 0.10f;
+        float explicit_cost_int4_rel_mse_threshold = 0.02f;
+        int min_hard_blocks = 1;
+        int max_hard_blocks = -1;
+        bool save_debug_tensors = true;
+    };
+
     bool enable = false;
     bool save_frozen_snapshot = false;
     int freeze_topology_iter = -1;
@@ -79,6 +94,7 @@ struct Phase2ResidualFieldOptions
     bool use_locality_base = true;
     int locality_high_sh_block_size = 64;
     int locality_low_sh_block_size = 128;
+    HybridSelectorOptions hybrid_selector;
 };
 
 struct Phase2ResidualFieldTrainOptions
@@ -106,15 +122,37 @@ struct Phase2ResidualFieldTrainOptions
     bool predict_scaling = true;
     bool predict_rotation = true;
     int block_embedding_dim = 8;
+    bool hybrid_hard_only = false;
+    bool hybrid_override_rest_only = true;
+    bool hybrid_easy_export_sh_drop = false;
+    bool hybrid_easy_export_sh_preserve_blocks = true;
+    float hybrid_easy_export_sh_energy_keep_ratio = 0.995f;
+    float hybrid_easy_export_sh_min_opacity = 0.01f;
+    int hybrid_easy_export_sh_min_level = 0;
     bool save_decoded_compact = true;
     bool save_phase2_compact = true;
     int decoded_xyz_quant_bits = 16;
     int decoded_attribute_quant_bits = 16;
     int decoded_rotation_quant_bits = 16;
+    int phase2_compact_opacity_quant_bits = 8;
+    int phase2_compact_scaling_quant_bits = 8;
     bool phase2_compact_pack_sh_levels = true;
     int phase2_compact_fdc_quant_bits = 8;
+    int phase2_compact_easy_rest_base_quant_bits = 16;
+    int phase2_compact_easy_rest_scale_quant_bits = 16;
+    float phase2_compact_easy_rest_int2_rel_mse_threshold = 0.0f;
     bool phase2_compact_use_geometry_codec = true;
     int phase2_compact_geometry_quant_bits = 16;
+    bool phase2_compact_store_field_fp16 = true;
+    bool phase2_compact_easy_rest_zlib = true;
+    int phase2_compact_easy_rest_zlib_level = 6;
+    bool phase2_compact_quantized_tensor_zlib = true;
+    int phase2_compact_quantized_tensor_zlib_level = 6;
+    bool phase2_compact_geometry_zlib = true;
+    int phase2_compact_geometry_zlib_level = 6;
+    bool phase2_compact_field_zlib = true;
+    int phase2_compact_field_zlib_level = 6;
+    bool phase2_compact_use_xz = false;
 };
 
 struct DecodedGaussianTensors
